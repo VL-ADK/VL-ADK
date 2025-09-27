@@ -76,16 +76,46 @@ complete_step = FunctionTool(func=complete_step_tool)
 # Vision: Primary tool (YOLO-E)
 # ----------------------------
 def view_query_tool(query: list[str]) -> dict:
-    """Primary tool — detect/search objects from the JetBot camera feed (YOLO-E).
+    """Tool to view/search for a list of objects from the JetBot camera feed.
 
     Args:
-        query (list[str]): Objects to search for (1–3 words each; colors allowed).
-            e.g. ["apple", "banana"]
-            e.g. ["red apple", "green apple"]
+        query (list[str]): A list of objects to search for. Each query can be 1-3 words, and you can optionally add color queries.
+        e.g. ["apple", "banana", "orange"]
+        e.g. ["red apple", "green apple", "yellow apple"]
+
+    Note:
+        - The "rotation_degree" field is the degree of rotation from the center of the image. Using it may be useful to turn head on towards the object.
+        - The bbox and area values are useful for determining distance. A larger bbox and area means the object is likely closer to the view, depending on the object.
 
     Returns:
-        dict: YOLO-E response (annotations, count, timestamps, prompts, etc.)
+        dict: The response from the view_query API with the following fields:
+        {
+            "annotations": [
+                {
+                    "class": "query",
+                    "confidence": float,
+                    "bbox": [x, y, w, h],
+                    "center": [x, y],
+                    "area": float,
+                    "prompt_index": int,
+                    "rotation_degree": float
+                }
+            ],
+            "count": 1,
+            "timestamp": float,
+            "image_shape": [w, h, 3],
+            "current_prompts": list[str],
+            "model_type": "YOLO-E",
+            "motor_data": {
+                "left_motor": float,
+                "right_motor": float
+            },
+            "frame_timestamp": float,
+            "detection_timestamp": float
+        }
+
     """
+
     print(f"[ADK-API] Viewing query: {query}")
     url = "http://localhost:8001/yolo/"
     # The YOLO-E API expects a GET request with repeated 'words' query params.
@@ -381,24 +411,15 @@ stop_robot = FunctionTool(func=stop_robot_tool)
 
 
 def scan_environment_tool(query: list[str]) -> dict:
-    """Perform a 360-degree scan of the environment.
+    """Tool to view/search for a list of objects from the JetBot camera feed.
 
     Args:
-        query (list[str]): Objects to search for (1–3 words each; colors allowed).
-            e.g. ["apple", "banana"]
-            e.g. ["red apple", "green apple"]
+        query (list[str]): A list of objects to search for. Each query can be 1-3 words, and you can optionally add color queries.
+        e.g. ["apple", "banana", "orange"]
+        e.g. ["red apple", "green apple", "yellow apple"]
 
     Returns:
-        dict: items seen in the scan at each of the four cardinal directions as degrees.
-        e.g. {
-            "status": "scanning",
-            "data": {
-                "0": ["apple", "banana"],
-                "90": ["apple", "banana"],
-                "180": ["apple", "banana"],
-                "270": ["apple", "banana"],
-            },
-        }
+        data from the scan_environment API, detailing what items were found in which quadrant.
 
     """
 
