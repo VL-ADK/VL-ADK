@@ -1,6 +1,6 @@
 export function AgentGraph() {
   return (
-    <svg className="w-full h-full bg-[#171717] font-mono">
+    <svg className="size-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-2 text-xs">
         <g stroke="white" strokeWidth="2" className="fill-white">
             <rect x="42.5%" y="11.5%" width="15%" height="6.5%" fill="transparent" />
             <text x="50%" y="15%" textAnchor="middle" strokeWidth={0.5} dominantBaseline="middle">ROOT</text>

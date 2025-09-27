@@ -11,7 +11,7 @@ export function Radar() {
     ];
 
     return (
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={200}>
             <ScatterChart
                 margin={{
                 top: 20,
