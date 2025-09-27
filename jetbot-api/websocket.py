@@ -65,14 +65,20 @@ class WebSocketServer:
 
     # ---------- Public API ----------
 
-    async def broadcast_jpeg_payload(self, jpeg_bytes: bytes, left_motor: float = 0.0, right_motor: float = 0.0):
+    async def broadcast_payload(self, jpeg_bytes: bytes, left_motor: float = 0.0, right_motor: float = 0.0, control=None):
         """Send image+control as JSON to all clients (latest-only)."""
         base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
-        msg = json.dumps({
+        payload = {
             "image": base64_image,
             "left_motor": left_motor,
             "right_motor": right_motor
-        })
+        }
+        
+        # Add control message if provided
+        if control is not None:
+            payload["control"] = control.dict() if hasattr(control, 'dict') else control
+            
+        msg = json.dumps(payload)
         async with self._lock:
             for client in list(self.clients):
                 await self._offer_latest(client.queue, msg)
