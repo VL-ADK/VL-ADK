@@ -40,7 +40,7 @@ except ImportError as e:
 API_HOST = "127.0.0.1"
 API_PORT = 8001
 WEBSOCKET_URL = "ws://localhost:8890"
-YOLO_MODEL_PATH = "yoloe-s.pt"
+YOLO_MODEL_PATH = "yoloe-l.pt"  # Use large model like working example
 
 # Initialize FastAPI
 app = FastAPI(title="YOLOE Backend", description="YOLO Object Detection for VL-ADK", version="0.1.0")
@@ -66,13 +66,13 @@ def init_yolo():
         model = None
 
 def set_prompts(prompts: List[str]):
-    """Set open-vocabulary prompts for YOLO-E."""
+    """Set open-vocabulary prompts for YOLO-E (matching working example)."""
     global current_prompts
     if model is None:
         return False
     
     try:
-        # Apply open-vocab text prompts to YOLO-E
+        # Apply open-vocab text prompts to YOLO-E (exact same as working example)
         try:
             pe = model.get_text_pe(prompts)  # text positional encodings (if available)
             model.set_classes(prompts, pe)
@@ -152,11 +152,11 @@ def run_yolo_detection(frame, target_words: List[str] = None):
             return {"error": "Failed to set default prompts"}
     
     try:
-        # Run YOLO-E inference with current prompts
+        # Run YOLO-E inference with current prompts (exact same as working example)
         results = model.predict(
             frame, 
-            conf=0.25, 
-            iou=0.5, 
+            conf=0.25,  # Same as working example
+            iou=0.5,    # Same as working example
             device=device, 
             verbose=False
         )
@@ -166,24 +166,34 @@ def run_yolo_detection(frame, target_words: List[str] = None):
             result = results[0]
             dets = result.boxes
             
+            # Debug output (like working example)
             if dets is not None and len(dets) > 0:
+                n = len(dets)
                 try:
-                    # Extract detection data (YOLO-E specific)
+                    # Extract detection data (exact same as working example)
                     cls_indices = dets.cls.int().cpu().tolist()
                     confidences = dets.conf.float().cpu().tolist()
-                    xyxy_boxes = dets.xyxy.float().cpu().tolist()
+                    xyxy_boxes = dets.xyxy.int().cpu().tolist()  # Note: int() like working example
                 except Exception:
-                    # Fallback for older tensor API
-                    cls_indices = [int(b.cls) for b in dets]
-                    confidences = [float(b.conf) for b in dets]
-                    xyxy_boxes = [b.xyxy.float().cpu().numpy().flatten().tolist() for b in dets]
+                    # Fallback for older tensor API (same as working example)
+                    cls_indices = []
+                    confidences = []
+                    xyxy_boxes = []
+                    for b in dets:
+                        cls_indices.append(int(b.cls))
+                        confidences.append(float(b.conf))
+                        xyxy_boxes.append(b.xyxy.int().cpu().numpy().flatten().tolist())
                 
-                for cls_idx, conf, box in zip(cls_indices, confidences, xyxy_boxes):
-                    # YOLO-E: class_id indexes current_prompts, not COCO classes
+                print(f"[DEBUG] {n} detections for prompts {current_prompts}")
+                
+                for i, (cls_idx, conf, box) in enumerate(zip(cls_indices, confidences, xyxy_boxes)):
+                    # YOLO-E: class_id indexes current_prompts, not COCO classes (same as working example)
                     if 0 <= cls_idx < len(current_prompts):
                         class_name = current_prompts[cls_idx]
                     else:
-                        class_name = f"unknown_class_{cls_idx}"
+                        class_name = f"id{cls_idx}"  # Same format as working example
+                    
+                    print(f"   {i}: {class_name} {conf:.2f} at {box}")  # Debug output like working example
                     
                     x1, y1, x2, y2 = box
                     
@@ -196,6 +206,8 @@ def run_yolo_detection(frame, target_words: List[str] = None):
                         "prompt_index": cls_idx
                     }
                     annotations.append(annotation)
+            else:
+                print(f"[DEBUG] 0 detections for prompts {current_prompts}")  # Debug output like working example
         
         return {
             "annotations": annotations,
