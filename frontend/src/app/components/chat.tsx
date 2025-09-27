@@ -22,13 +22,52 @@ export function Chat({session}: {session: SessionToken | null}) {
             return;
         }
 
-        setMessages([...messages, { role: "user", content: message }]);
+        function buildMessage(message: string) {
+            return { role: "agent", content: message } as Message;
+        }
+
+        const usr = { role: "user", content: message } as Message;
+
+        setMessages([...messages, usr]);
         setLoading(true);
-        const prompt = await sendPrompt(session, message);
+        const prompt:any[] = await sendPrompt(session, message);
         console.log(prompt);
         setLoading(false);
         try {
-            setMessages([...messages, { role: "user", content: message }, { role: "agent", content: prompt[0].content.parts[0].text }]);
+            let agentFeedback: Message[] = [];
+            prompt.forEach((o:any)=>{
+                o.content.parts.forEach((part:any)=>{
+                    if(part.text != null)
+                    {
+                        agentFeedback.push(buildMessage(part.text));
+                        setMessages([...messages, usr, ...agentFeedback]);
+                    }
+                        
+                    if(part.functionCall != null)
+                    {
+                        let res =`Called (${part.functionCall.name}): `;
+                        /*
+                        (part.functionCall.args as any[]).forEach((arg:any)=>{
+                            res += arg.toString() + " ";
+                        })
+                        */
+                        agentFeedback.push(buildMessage(res));
+                        setMessages([...messages, usr, ...agentFeedback]);
+                    }
+
+                    if(part.functionResponse != null)
+                    {
+                        let res =`Recieved (${part.functionResponse.name}): `;
+                        /*
+                        (part.functionResponse.response as any[]).forEach((arg:any)=>{
+                            res += arg.toString() + " ";
+                        })
+                            */
+                        agentFeedback.push(buildMessage(res));
+                        setMessages([...messages, usr, ...agentFeedback]);
+                    }
+                })
+            })
         } catch (error) {
             console.log("Error parsing response:", error);
         }
@@ -51,7 +90,7 @@ export function Chat({session}: {session: SessionToken | null}) {
 
     return (
         <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] flex flex-col justify-end gap-2 p-2 text-xs">
-            <div id="chat-messages" className="w-full max-h-full bg-[#171717] flex flex-col gap-2 overflow-auto">
+            <div id="chat-messages" className="w-full max-h-[160px] bg-[#171717] flex flex-col gap-2 overflow-auto">
             {messages.map((message, index) => (
                 <div 
                     key={index} 
@@ -68,9 +107,9 @@ export function Chat({session}: {session: SessionToken | null}) {
                     </div>
                 </div>))}
                 {loading && <div 
-                    className={`w-fit px-2 py-1 rounded-sm shadow-sm bg-gray-200 text-black`}
+                    className={`w-fit px-2 py-1 rounded-sm shadow-sm bg-gray-800 text-white`}
                     >
-                        <Loader className="animate-spin w-4 h-4 my-auto" />
+                        <Loader className="animate-spin w-4 h-4 my-auto text-white" />
                     </div>}
             </div>
             <form className="h-fit w-full bg-[#171717] flex flex-row gap-2" onSubmit={(e) => {
