@@ -82,14 +82,13 @@ export function Chat({session}: {session: SessionToken | null}) {
             }
 
             if(done) {
+                setLoading(false);
                 return;
             }
             prompt.push(JSON.parse(decoder.decode(value).replace("data: ", "").replace("\n", "")));
             parse(prompt);
             return reader.read().then(pump);
         });
-        
-        setLoading(false);
     }
 
     useEffect(()=>{
@@ -109,7 +108,7 @@ export function Chat({session}: {session: SessionToken | null}) {
 
     return (
         <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] flex flex-col justify-end gap-2 p-2 text-xs">
-            <div id="chat-messages" className="w-full max-h-[160px] bg-[#171717] flex flex-col gap-2 overflow-auto">
+            <div id="chat-messages" className="w-full max-h-[160px] bg-[#171717] flex flex-col gap-1 overflow-auto">
             {messages.map((message, index) => (
                 <div 
                     key={index} 
