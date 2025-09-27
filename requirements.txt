@@ -4,7 +4,8 @@
 # Core dependencies
 websockets
 # opencv-python  # Use system opencv instead (has GStreamer support)
-numpy<2  # System OpenCV requires NumPy 1.x compatibility
+# NOTE: pip opencv-python does NOT have GStreamer/nvargus support needed for Jetson camera
+numpy<2  # Use latest compatible version (system OpenCV handles compatibility)
 traitlets
 ipywidgets
 Adafruit_MotorHAT

@@ -37,10 +37,17 @@ except ImportError as e:
     raise
 
 # Configuration
+import os
+from datetime import datetime
 API_HOST = "127.0.0.1"
 API_PORT = 8001
-WEBSOCKET_URL = "ws://localhost:8890"
+WEBSOCKET_URL = os.getenv("WEBSOCKET_URL", "ws://localhost:8890")
 YOLO_MODEL_PATH = "yoloe-l.pt"
+FORCE_CPU = os.getenv("FORCE_CPU", "false").lower() == "true"
+DEBUG_SAVE_DIR = os.getenv("DEBUG_SAVE_DIR", "./debug_images")
+
+# Create debug directory if it doesn't exist
+os.makedirs(DEBUG_SAVE_DIR, exist_ok=True)
 
 # Initialize FastAPI
 app = FastAPI(title="YOLOE Backend", description="YOLO Object Detection for VL-ADK", version="0.1.0")
@@ -56,10 +63,28 @@ device = None
 def init_yolo():
     global model, device
     try:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Force CPU if environment variable is set or CUDA has issues
+        if FORCE_CPU:
+            device = "cpu"
+            print("Forcing CPU mode due to FORCE_CPU=true")
+        else:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        
         print(f"Using device: {device}")
         print(f"Loading YOLO-E model: {YOLO_MODEL_PATH}")
-        model = YOLOE(YOLO_MODEL_PATH).to(device)
+        
+        # Try to load model, fallback to CPU if CUDA fails
+        try:
+            model = YOLOE(YOLO_MODEL_PATH).to(device)
+        except RuntimeError as cuda_error:
+            if "CUDA" in str(cuda_error) and device == "cuda":
+                print(f"CUDA error encountered: {cuda_error}")
+                print("Falling back to CPU mode...")
+                device = "cpu"
+                model = YOLOE(YOLO_MODEL_PATH).to(device)
+            else:
+                raise
+        
         print("YOLO-E model loaded successfully!")
     except Exception as e:
         print(f"Failed to load YOLO-E model: {e}")
@@ -86,6 +111,68 @@ def set_prompts(prompts: List[str]):
     except Exception as e:
         print(f"Failed to set prompts: {e}")
         return False
+
+def draw_annotations_on_frame(frame, annotations, save_path=None):
+    """Draw bounding boxes and labels on frame, optionally save to file."""
+    if frame is None or not annotations:
+        return frame
+    
+    # Create a copy to avoid modifying original
+    annotated_frame = frame.copy()
+    
+    # Define colors for different classes (BGR format)
+    colors = [
+        (0, 255, 0),    # Green
+        (255, 0, 0),    # Blue
+        (0, 0, 255),    # Red
+        (255, 255, 0),  # Cyan
+        (255, 0, 255),  # Magenta
+        (0, 255, 255),  # Yellow
+        (128, 0, 128),  # Purple
+        (255, 165, 0),  # Orange
+    ]
+    
+    for i, ann in enumerate(annotations):
+        # Get bounding box coordinates
+        x1, y1, x2, y2 = ann["bbox"]
+        
+        # Choose color based on class
+        color_idx = ann.get("prompt_index", i) % len(colors)
+        color = colors[color_idx]
+        
+        # Draw bounding box
+        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+        
+        # Prepare label text
+        class_name = ann["class"]
+        confidence = ann["confidence"]
+        label = f"{class_name}: {confidence:.2f}"
+        
+        # Get text size for background
+        (text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+        
+        # Draw label background
+        cv2.rectangle(annotated_frame, 
+                     (x1, y1 - text_height - 10), 
+                     (x1 + text_width, y1), 
+                     color, -1)
+        
+        # Draw label text
+        cv2.putText(annotated_frame, label, 
+                   (x1, y1 - 5), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, 
+                   (255, 255, 255), 2)
+        
+        # Draw center point
+        center_x, center_y = int(ann["center"][0]), int(ann["center"][1])
+        cv2.circle(annotated_frame, (center_x, center_y), 4, color, -1)
+    
+    # Save to file if path provided
+    if save_path:
+        cv2.imwrite(save_path, annotated_frame)
+        print(f"Saved annotated image to: {save_path}")
+    
+    return annotated_frame
 
 # WebSocket client to receive images
 async def websocket_client():
@@ -287,6 +374,71 @@ async def health_check():
         "device": device,
         "latest_frame_age": time.time() - latest_frame["timestamp"] if latest_frame else None,
         "websocket_connected": latest_frame is not None
+    }
+
+@app.get("/debug/save_annotated")
+async def save_annotated_image(words: Optional[List[str]] = Query(None, description="Target words to detect")):
+    """Save current frame with YOLO annotations to debug directory on laptop."""
+    
+    with frame_lock:
+        if latest_frame is None:
+            return {
+                "error": "No image available from WebSocket stream",
+                "saved": False
+            }
+        
+        frame_data = latest_frame.copy()
+    
+    # Check if frame is too old
+    if time.time() - frame_data["timestamp"] > 5:
+        return {
+            "error": "Image data is stale",
+            "saved": False,
+            "age_seconds": time.time() - frame_data["timestamp"]
+        }
+    
+    # Run YOLO detection
+    results = run_yolo_detection(frame_data["frame"], words)
+    
+    if "error" in results:
+        return {
+            "error": results["error"],
+            "saved": False
+        }
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    prompts_str = "_".join(words) if words else "_".join(current_prompts) if current_prompts else "default"
+    filename = f"yolo_debug_{timestamp}_{prompts_str}.jpg"
+    save_path = os.path.join(DEBUG_SAVE_DIR, filename)
+    
+    # Draw annotations and save
+    annotated_frame = draw_annotations_on_frame(frame_data["frame"], results["annotations"], save_path)
+    
+    # Also save metadata
+    metadata_path = save_path.replace(".jpg", "_metadata.json")
+    metadata = {
+        "timestamp": timestamp,
+        "prompts": results.get("current_prompts", []),
+        "detection_count": results.get("count", 0),
+        "annotations": results["annotations"],
+        "motor_data": frame_data["motor_data"],
+        "frame_timestamp": frame_data["timestamp"],
+        "detection_timestamp": time.time(),
+        "image_shape": results.get("image_shape", None)
+    }
+    
+    with open(metadata_path, 'w') as f:
+        import json
+        json.dump(metadata, f, indent=2)
+    
+    return {
+        "saved": True,
+        "image_path": save_path,
+        "metadata_path": metadata_path,
+        "detection_count": results.get("count", 0),
+        "prompts": results.get("current_prompts", []),
+        "annotations": results["annotations"]
     }
 
 @app.on_event("startup")

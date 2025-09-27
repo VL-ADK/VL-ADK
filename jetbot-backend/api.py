@@ -9,7 +9,7 @@ from typing import Optional
 from fastapi import FastAPI
 from jetbot import Robot
 from models import RobotControlMessage
-
+import math
 
 class RobotActions:
     """
@@ -29,6 +29,12 @@ class RobotActions:
         if duration is not None:
             time.sleep(duration)
             self.stop()
+
+    def scan(self, speed: float = 0.5):
+        angular_v = (speed/0.68)/(32.5/1000)
+        rps = angular_v/(2*math.pi)
+        print("RPS FOR SCAN: ", 1/rps)
+        self.turn_left(speed, 1/rps)
 
     # --- Public movement functions ---
     def move_forward(self, speed: float = 0.5, duration: float = None):
@@ -64,9 +70,12 @@ class Api:
     def _setup_routes(self):
         """Setup all API routes with the robot actions."""
 
-        @self.app_post("/scan")
+        @self.app.post("/scan/")
         def api_scan(speed: float = 0.5):
-            
+            self.current_command = RobotControlMessage(status="scanning", speed=speed, duration=None)
+            self.actions.scan(speed)
+            return {"status": "scanning", "speed": speed}
+
         @self.app.post("/forward/")
         def api_forward(speed: float = 0.5, duration: float = None):
             print(f"Moving forward at speed {speed} for {duration} seconds")

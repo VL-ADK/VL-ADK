@@ -169,6 +169,46 @@ def find_target_object(target: str) -> Optional[Dict]:
     
     return {"found": False}
 
+def save_debug_image(target_words: Optional[List[str]] = None, timeout: int = 10) -> Dict:
+    """
+    Save current frame with YOLO annotations to debug directory.
+    
+    Args:
+        target_words: Optional list of object classes to detect and annotate
+        timeout: Request timeout in seconds (longer for image processing)
+        
+    Returns:
+        Dictionary with save status and file paths
+    """
+    try:
+        params = {}
+        if target_words:
+            params["words"] = target_words
+            
+        response = requests.get(
+            f"{YOLO_API_URL}/debug/save_annotated", 
+            params=params,
+            timeout=timeout
+        )
+        response.raise_for_status()
+        return response.json()
+        
+    except requests.exceptions.Timeout:
+        return {
+            "saved": False,
+            "error": "YOLO-E debug API timeout"
+        }
+    except requests.exceptions.ConnectionError:
+        return {
+            "saved": False,
+            "error": "Cannot connect to YOLO-E API - is it running?"
+        }
+    except Exception as e:
+        return {
+            "saved": False,
+            "error": f"YOLO-E debug API error: {str(e)}"
+        }
+
 if __name__ == "__main__":
     # Test the YOLO-E tool
     print("Testing YOLO-E Tool...")
@@ -197,3 +237,20 @@ if __name__ == "__main__":
     # Test finding specific object
     bottle_result = find_target_object("bottle")
     print(f"Bottle search: {bottle_result}")
+    
+    # Test debug image saving
+    print("\nTesting debug image saving...")
+    debug_result = save_debug_image(["person", "bottle", "car"])
+    print(f"Debug save result: {debug_result}")
+    
+    if debug_result.get("saved", False):
+        print(f"Saved annotated image to: {debug_result.get('image_path', 'unknown')}")
+        print(f"Saved metadata to: {debug_result.get('metadata_path', 'unknown')}")
+        print(f"Detected {debug_result.get('detection_count', 0)} objects")
+    else:
+        print(f"Failed to save debug image: {debug_result.get('error', 'unknown error')}")
+    
+    # Test debug save with current prompts
+    print("\nTesting debug save with current prompts...")
+    debug_current = save_debug_image()
+    print(f"Debug save (current prompts): {debug_current}")
