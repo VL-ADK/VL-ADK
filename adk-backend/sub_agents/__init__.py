@@ -1,43 +1,33 @@
-from google.adk.agents import LoopAgent, ParallelAgent, SequentialAgent
+from google.adk.agents import LoopAgent, SequentialAgent
 
 from .director.agent import director
-from .mission_controller.agent import mission_controller
 from .observer.agent import observer
-from .operations_manager.agent import operations_manager
 from .pilot.agent import pilot
-from .strategist.agent import strategist
 
-# Simple execution loop: Mission Controller checks completion and escalates when done
+# Execution loop: Observer and Pilot loop until done
 execution_loop = LoopAgent(
     name="execution_loop",
     sub_agents=[
-        mission_controller,  # Checks if mission is complete, escalates if done
-        operations_manager,  # Coordinates next step
-        pilot,  # Executes movement (will add ParallelAgent later)
-        observer,  # Processes vision (will add ParallelAgent later)
+        observer,
+        pilot,
     ],
     max_iterations=50,
 )
 
-
-# Complete system: Planning phase → Execution loop
+# Complete system: Director initializes → Execution loop until done
 autonomous_robot_system = SequentialAgent(
     name="autonomous_robot_system",
     sub_agents=[
-        director,  # Initialize mission
-        strategist,  # Create execution plan
-        execution_loop,  # Execute until complete
+        director,
+        execution_loop,
     ],
 )
 
 
 __all__ = [
     "director",
-    "strategist",
-    "mission_controller",
-    "operations_manager",
-    "pilot",
     "observer",
+    "pilot",
     "execution_loop",
     "autonomous_robot_system",
 ]
