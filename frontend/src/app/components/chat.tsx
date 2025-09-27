@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { sendPrompt, SessionToken } from "../endpoints";
+import { baseUrl, sendPrompt, SessionToken } from "../endpoints";
 import { Loader, Send } from "lucide-react";
 
 export type Message = {
@@ -9,12 +9,20 @@ export type Message = {
     content: string;
 }
 
+function buildMessage(message: string) {
+    return { role: "agent", content: message } as Message;
+}
+
 export function Chat({session}: {session: SessionToken | null}) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
     const [canSend, setCanSend] = useState(false);
 
+    const decoder = new TextDecoder('utf-8');
+
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const evtSource = useRef<EventSource | null>(null);
 
     const handleSendMessage = async (message: string) => {
         if(!session) {
@@ -22,55 +30,66 @@ export function Chat({session}: {session: SessionToken | null}) {
             return;
         }
 
-        function buildMessage(message: string) {
-            return { role: "agent", content: message } as Message;
-        }
-
         const usr = { role: "user", content: message } as Message;
 
         setMessages([...messages, usr]);
         setLoading(true);
-        const prompt:any[] = await sendPrompt(session, message);
-        console.log(prompt);
-        setLoading(false);
-        try {
-            let agentFeedback: Message[] = [];
-            prompt.forEach((o:any)=>{
-                o.content.parts.forEach((part:any)=>{
-                    if(part.text != null)
-                    {
-                        agentFeedback.push(buildMessage(part.text));
-                        setMessages([...messages, usr, ...agentFeedback]);
-                    }
-                        
-                    if(part.functionCall != null)
-                    {
-                        let res =`Called (${part.functionCall.name}): `;
-                        /*
-                        (part.functionCall.args as any[]).forEach((arg:any)=>{
-                            res += arg.toString() + " ";
-                        })
-                        */
-                        agentFeedback.push(buildMessage(res));
-                        setMessages([...messages, usr, ...agentFeedback]);
-                    }
+        const stream = await sendPrompt(session, message);
+        const prompt:any[] = []
+        const reader = stream.getReader();
+        reader.read().then(function pump({done, value}):any {
 
-                    if(part.functionResponse != null)
-                    {
-                        let res =`Recieved (${part.functionResponse.name}): `;
-                        /*
-                        (part.functionResponse.response as any[]).forEach((arg:any)=>{
-                            res += arg.toString() + " ";
+            function parse(p:any[]) {
+                try {
+                    let agentFeedback: Message[] = [];
+                    p.forEach((o:any)=>{
+                        if(!o.partial)
+                        o.content.parts.forEach((part:any)=>{
+                            if(part.text != null)
+                            {
+                                agentFeedback.push(buildMessage(part.text));
+                                setMessages([...messages, usr, ...agentFeedback]);
+                            }
+                                
+                            if(part.functionCall != null)
+                            {
+                                let res =`Called (${part.functionCall.name}): `;
+                                /*
+                                (part.functionCall.args as any[]).forEach((arg:any)=>{
+                                    res += arg.toString() + " ";
+                                })
+                                */
+                                agentFeedback.push(buildMessage(res));
+                                setMessages([...messages, usr, ...agentFeedback]);
+                            }
+        
+                            if(part.functionResponse != null)
+                            {
+                                let res =`Recieved (${part.functionResponse.name}): `;
+                                /*
+                                (part.functionResponse.response as any[]).forEach((arg:any)=>{
+                                    res += arg.toString() + " ";
+                                })
+                                    */
+                                agentFeedback.push(buildMessage(res));
+                                setMessages([...messages, usr, ...agentFeedback]);
+                            }
                         })
-                            */
-                        agentFeedback.push(buildMessage(res));
-                        setMessages([...messages, usr, ...agentFeedback]);
-                    }
-                })
-            })
-        } catch (error) {
-            console.log("Error parsing response:", error);
-        }
+                    })
+                } catch (error) {
+                    console.log("Error parsing response:", error);
+                }
+            }
+
+            if(done) {
+                return;
+            }
+            prompt.push(JSON.parse(decoder.decode(value).replace("data: ", "").replace("\n", "")));
+            parse(prompt);
+            return reader.read().then(pump);
+        });
+        
+        setLoading(false);
     }
 
     useEffect(()=>{

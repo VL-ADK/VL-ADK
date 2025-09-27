@@ -1,5 +1,5 @@
-const baseUrl = "http://localhost:8000";
-const ROOT_AGENT = "root_agent";
+export const baseUrl = "http://localhost:8000";
+export const ROOT_AGENT = "root_agent";
 
 export type SessionToken = {
     id: string;
@@ -22,7 +22,7 @@ export const startSession = async () => {
 };
 
 export const sendPrompt = async (session:SessionToken, prompt: string) => {
-    const response = await fetch(`${baseUrl}/run`, {
+    const response = await fetch(`${baseUrl}/run_sse`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -38,8 +38,10 @@ export const sendPrompt = async (session:SessionToken, prompt: string) => {
                         "text": prompt
                     }
                 ]
-            }
+            },
+            streaming: true
         }),
     });
-    return response.json();
+    console.log(response);
+    return response.body as ReadableStream<Uint8Array>;
 };
