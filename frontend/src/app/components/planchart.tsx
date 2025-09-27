@@ -11,9 +11,16 @@ export type PlanEntry = {
 export function PlanChart() {
     const [plans, setPlans] = useState<PlanEntry[]>([]);
 
+    const statusColors = {
+        "pending": "bg-gray-500",
+        "running": "bg-yellow-500",
+        "completed": "bg-green-500",
+        "failed": "bg-red-500",
+    }
+
     function addPlan(desc: string) {
         console.log(plans.length);
-        setPlans([{ desc: "1", startedAt: new Date(), endedAt: new Date(0), status: "pending" }, { desc: "2", startedAt: new Date(), endedAt: new Date(0), status: "pending" }, ...plans]);
+        setPlans([{ desc: "Scan the area", startedAt: new Date(), endedAt: new Date(0), status: "completed" }, { desc: "Find a target", startedAt: new Date(), endedAt: new Date(0), status: "pending" }, ...plans]);
     }
 
     useEffect(() => {
@@ -21,16 +28,14 @@ export function PlanChart() {
     }, []);
 
     return (
-        <div className="w-full h-full bg-[#171717] font-mono">
-            Plan Chart
-            <div className="flex flex-col gap-2 p-1 overflow-y-scroll justify-end">
+        <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-1 text-xs">
+            <div className="flex flex-col gap-1 overflow-y-scroll justify-end">
                 {plans.map((plan, i) => (
-                    <div key={i} className="flex flex-col gap-1 border p-1">
+                    <div key={i} className="flex flex-col gap-1 border-b-2 rounded-sm bg-[#1f2630] border-[#27303e] p-1">
                         <div>{plan.desc}</div>
-                        <div className="flex flex-row gap-1 text-sm text-gray-500">
-                            <div>{plan.startedAt.toISOString()}</div>
-                            <div>{plan.endedAt.toISOString()}</div>
-                            <div>{plan.status}</div>
+                        <div className="flex flex-row gap-1.5 px-0.5 text-xs text-gray-500">
+                            <div className={`w-1.5 h-1.5 rounded-full my-auto ${statusColors[plan.status]}`} />
+                            <div>{plan.status.toUpperCase()}</div>
                         </div>
                     </div>
                 ))}
