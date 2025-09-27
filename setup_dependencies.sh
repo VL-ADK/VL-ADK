@@ -120,46 +120,24 @@ fi
 
 # ---------- PyTorch (GPU wheels; wheels include CUDA runtime) ----------
 echo "Checking PyTorch installation..."
-<<<<<<< HEAD
-if python - <<'PY' 2>/dev/null
-=======
 if python - <<'PY' 2>/dev/null; then
->>>>>>> 923175d56ada0b22c48334db81bef61e80a97f13
 import torch, sys
 print(f"Found PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}")
 sys.exit(0)
 PY
-then
   echo "PyTorch already installed, skipping..."
 else
-<<<<<<< HEAD
-  if [ "$ENVIRONMENT" = "jetson" ]; then
-    echo "Installing PyTorch (Jetson / cu124 wheels)..."
-    pip install --upgrade --no-cache-dir torch torchvision torchaudio \
-      --index-url https://download.pytorch.org/whl/cu124
-  else
-    echo "Installing PyTorch (nightly CUDA 12.8 wheels for sm_120)…"
-    pip install --pre --upgrade --no-cache-dir torch torchvision torchaudio \
-      --index-url https://download.pytorch.org/whl/nightly/cu128
-  fi
-=======
   echo "Installing PyTorch (CUDA-enabled wheels, cu124 channel)..."
-  # cu124 wheels require a reasonably new NVIDIA driver (you have 580.x ✅)
+  # cu124 wheels require a reasonably new NVIDIA driver
   pip install --upgrade --no-cache-dir torch torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/cu124
->>>>>>> 923175d56ada0b22c48334db81bef61e80a97f13
 fi
 
 # ---------- Ultralytics / YOLO-E ----------
 echo "Ensuring Ultralytics is installed..."
-<<<<<<< HEAD
-if python - <<'PY' 2>/dev/null
-=======
 if python - <<'PY' 2>/dev/null; then
->>>>>>> 923175d56ada0b22c48334db81bef61e80a97f13
 import ultralytics; print("Ultralytics present")
 PY
-then
   echo "Ultralytics already installed, skipping..."
 else
   if [ "$ENVIRONMENT" = "jetson" ]; then
