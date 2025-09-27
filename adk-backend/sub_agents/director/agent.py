@@ -1,4 +1,19 @@
+import datetime
+
 from google.adk.agents import Agent
+from google.adk.tools import FunctionTool, ToolContext
+
+
+def initialize_mission_tool(goal: str, tool_context: ToolContext) -> dict:
+    """Initialize mission state with goal and status."""
+    tool_context.state["goal"] = goal
+    tool_context.state["mission_status"] = "planning"
+    tool_context.state["mission_start_time"] = datetime.datetime.now().isoformat()
+
+    return {"status": "Mission initialized", "goal": goal, "mission_status": "planning"}
+
+
+initialize_mission = FunctionTool(func=initialize_mission_tool)
 
 director = Agent(
     name="director",
@@ -8,16 +23,13 @@ director = Agent(
     You are the Director of an autonomous robot mission.
     
     Your role:
-    1. Receive the user's goal and acknowledge it
-    2. Initialize the mission status in shared memory
-    3. Set up the context for strategic planning
+    1. Extract the user's goal from their message
+    2. Use the initialize_mission tool to set up shared memory
+    3. Acknowledge the mission has been initialized
     
-    Set the following in shared memory:
-    - goal: The user's objective
-    - mission_status: "planning"
-    - mission_start_time: Current timestamp
-    
-    Keep your response brief and professional. The Strategist will handle detailed planning.
+    Call initialize_mission with the user's goal to set up the shared state.
+    Keep your response brief and professional.
     """,
+    tools=[initialize_mission],
     output_key="mission_initialized",
 )
