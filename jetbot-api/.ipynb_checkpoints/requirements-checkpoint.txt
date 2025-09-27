@@ -1,7 +1,0 @@
-websockets
-opencv-python
-traitlets
-ipywidgets
-Adafruit_MotorHAT
-smbus2
-pydantic
