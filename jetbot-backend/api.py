@@ -18,12 +18,17 @@ class RobotActions:
     """
     def __init__(self, robot):
         self.robot = robot
+        self.left_speed = None
+        self.right_speed = None
 
     # --- Core movement function ---
     def _set_motors(self, left_speed: float, right_speed: float, duration: float = 1):
         """
         Set motor speeds and optionally stop after duration.
         """
+        self.left_speed = left_speed
+        slef.right_speed = right_speed
+
         self.robot.left_motor.value = left_speed
         self.robot.right_motor.value = right_speed
         if duration is not None:
@@ -31,10 +36,7 @@ class RobotActions:
             self.stop()
 
     def scan(self, speed: float = 0.5):
-        angular_v = (speed/0.68)/(32.5/1000)
-        rps = angular_v/(2*math.pi)
-        print("RPS FOR SCAN: ", 1/rps)
-        self.turn_left(speed, 1/rps)
+        self.turn_left(speed, 1)
 
     # --- Public movement functions ---
     def move_forward(self, speed: float = 0.5, duration: float = None):
@@ -49,6 +51,9 @@ class RobotActions:
     def turn_right(self, speed: float = 0.5, duration: float = None):
         self._set_motors(speed, -speed, duration)
 
+    def smooth_stop(self):
+        _set_motors(self.left_speed//2, self.right_speed//2, )
+            
     def stop(self):
         """
         Stop both motors immediately.

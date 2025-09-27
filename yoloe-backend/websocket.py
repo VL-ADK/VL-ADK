@@ -64,7 +64,6 @@ class YoloWebSocketServer:
         print(f"YOLO WebSocket client disconnected: {getattr(client.ws, 'remote_address', '?')}")
 
     # ---------- Public API ----------
-
     async def broadcast_annotated_frame(self, annotated_jpeg_bytes: bytes, annotations: list, detection_data=None):
         """Send annotated image + detection data as JSON to all clients (latest-only)."""
         base64_image = base64.b64encode(annotated_jpeg_bytes).decode("utf-8")
