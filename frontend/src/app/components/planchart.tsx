@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Tooltip } from "react-tooltip";
 
 export type PlanEntry = {
     desc: string;
@@ -31,12 +32,24 @@ export function PlanChart() {
         <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-1 text-xs">
             <div className="flex flex-col gap-1 overflow-y-scroll justify-end">
                 {plans.map((plan, i) => (
-                    <div key={i} className="flex flex-col gap-1 border-b-2 rounded-sm bg-[#1f2630] border-[#27303e] p-1">
+                    <div id={`plan-${i}`} key={i} className="flex flex-col gap-1 border-b-2 rounded-sm bg-[#1f2630] border-[#27303e] p-1">
                         <div>{plan.desc}</div>
                         <div className="flex flex-row gap-1.5 px-0.5 text-xs text-gray-500">
                             <div className={`w-1.5 h-1.5 rounded-full my-auto ${statusColors[plan.status]}`} />
                             <div>{plan.status.toUpperCase()}</div>
+                            
                         </div>
+                        <Tooltip anchorSelect={`#plan-${i}`} float opacity={0.95}>
+                            <div>
+                                <div className="font-bold text-base">{plan.desc}</div>
+                                <div className="flex flex-row gap-1.5 px-0.5 text-xs mb-2">
+                                    <div className={`w-1.5 h-1.5 rounded-full my-auto ${statusColors[plan.status]}`} />
+                                    <div>{plan.status.toUpperCase()}</div>
+                                </div>
+                                <div>Started at {plan.startedAt.toLocaleString()}</div>
+                                {plan.endedAt >= new Date() ? <div>Ended at {plan.endedAt.toLocaleString()}</div> : <div>Not ended yet</div>}
+                            </div>
+                        </Tooltip>
                     </div>
                 ))}
             </div>

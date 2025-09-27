@@ -5,14 +5,16 @@ import { Chat } from "./components/chat";
 import { Radar } from "./components/radar";
 import { AgentGraph } from "./components/agentgraph";
 import { PlanChart } from "./components/planchart";
-import { Message, MotorData, wsURL } from "./websocket";
+import { ControlSchema, Message, MotorData, wsURL } from "./websocket";
 import { useEffect, useRef, useState } from "react";
 import { SessionToken, startSession } from "./endpoints";
+import Motor from "./components/motor";
 
 export default function Home() {
   const ws = useRef<WebSocket | null>(null);
   const [image, setImage] = useState<string | undefined>("");
-  const [control, setControl] = useState<MotorData | null>(null);
+  const [motorData, setMotorData] = useState<MotorData | null>(null);
+  const [control, setControl] = useState<ControlSchema | null>(null);
   const [session, setSession] = useState<SessionToken | null>(null);
 
   const AGENT_GRAPH = 0;
@@ -31,9 +33,9 @@ export default function Home() {
 
       ws.current.onmessage = (event) => {
         const body:Message = JSON.parse(event.data);
-        //console.log(body);
         setImage(body.image);
-        setControl({left_motor: body.left_motor, right_motor: body.right_motor});
+        setMotorData({left_motor: body.left_motor, right_motor: body.right_motor});
+        setControl(body.control || null);
       }
 
       ws.current.onerror = (event) => {
@@ -110,7 +112,7 @@ export default function Home() {
               <div className="size-full">
                 {tab === AGENT_GRAPH && <AgentGraph/>}
                 {tab === RADAR && <Radar/>}
-                {tab === MOTOR_DATA && <PlanChart/>}
+                {tab === MOTOR_DATA && <Motor motorData={motorData} control={control}/>}
               </div>
             </div>
             <div className="row-span-1 size-full">
