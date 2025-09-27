@@ -51,62 +51,58 @@ class RobotActions:
 
 
 class Api:
-    def __init__(self, robot: Robot, host: str = "127.0.0.1", port: int = 8889):
+    def __init__(self, robot: Robot, host: str = "127.0.0.1", port: int = 8890):
         self.host = host
         self.port = port
         self.robot = robot
         self.actions = RobotActions(robot)
         self.app = FastAPI(title="JetBot API")
         self.server = None
-        
-        # Track current robot command state
         self.current_command: Optional[RobotControlMessage] = None
-        
-        # Register API endpoints
         self._setup_routes()
     
     def _setup_routes(self):
         """Setup all API routes with the robot actions."""
-        
         @self.app.post("/forward/")
         def api_forward(speed: float = 0.5, duration: float = None):
+            print(f"Moving forward at speed {speed} for {duration} seconds")
             self.current_command = RobotControlMessage(status="moving forward", speed=speed, duration=duration)
             self.actions.move_forward(speed, duration)
-            # Clear command after execution if duration was specified
             if duration is not None:
                 self.current_command = None
             return {"status": "moving forward", "speed": speed, "duration": duration}
 
         @self.app.post("/backward/")
         def api_backward(speed: float = 0.5, duration: float = None):
+            print(f"Moving backward at speed {speed} for {duration} seconds")
             self.current_command = RobotControlMessage(status="moving backward", speed=speed, duration=duration)
             self.actions.move_backward(speed, duration)
-            # Clear command after execution if duration was specified
             if duration is not None:
                 self.current_command = None
             return {"status": "moving backward", "speed": speed, "duration": duration}
 
         @self.app.post("/left/")
         def api_left(speed: float = 0.5, duration: float = None):
+            print(f"Turning left at speed {speed} for {duration} seconds")
             self.current_command = RobotControlMessage(status="turning left", speed=speed, duration=duration)
             self.actions.turn_left(speed, duration)
-            # Clear command after execution if duration was specified
             if duration is not None:
                 self.current_command = None
             return {"status": "turning left", "speed": speed, "duration": duration}
 
         @self.app.post("/right/")
         def api_right(speed: float = 0.5, duration: float = None):
+            print(f"Turning right at speed {speed} for {duration} seconds")
             self.current_command = RobotControlMessage(status="turning right", speed=speed, duration=duration)
             self.actions.turn_right(speed, duration)
-            # Clear command after execution if duration was specified
             if duration is not None:
                 self.current_command = None
             return {"status": "turning right", "speed": speed, "duration": duration}
 
         @self.app.post("/stop/")
         def api_stop():
-            self.current_command = None  # Clear any active command
+            print("Stopping robot")
+            self.current_command = None
             self.actions.stop()
             return {"status": "stopped"}
     

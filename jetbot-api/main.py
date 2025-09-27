@@ -30,11 +30,11 @@ try:
     time.sleep(1)  # let camera warm up
     test_frame = camera.value
     if test_frame is not None:
-        print(f"✅ Camera working! Frame shape: {test_frame.shape}")
+        print(f"Camera working! Frame shape: {test_frame.shape}")
     else:
-        print("⚠️ Camera initialized but no frame yet")
+        print("Camera initialized but no frame yet")
 except Exception as e:
-    print(f"❌ Failed to initialize JetBot Camera: {e}")
+    print(f"Failed to initialize JetBot Camera: {e}")
     camera = None
 
 # Initialize JetBot Robot
@@ -42,9 +42,9 @@ robot = None
 try:
     print("Initializing JetBot Robot...")
     robot = Robot(i2c_bus=7, left_motor_channel=1, right_motor_channel=2)
-    print("✅ Robot initialized successfully!")
+    print("Robot initialized successfully!")
 except Exception as e:
-    print(f"❌ Failed to initialize JetBot Robot: {e}")
+    print(f"Failed to initialize JetBot Robot: {e}")
     robot = None
 
 
@@ -59,7 +59,7 @@ async def main():
         api_server = Api(robot, API_HOST, API_PORT)
         asyncio.create_task(api_server.start())
     else:
-        print("⚠️ Skipping API server - no robot available")
+        print("Skipping API server - no robot available")
 
     async def stream_camera():
         if camera is None:
