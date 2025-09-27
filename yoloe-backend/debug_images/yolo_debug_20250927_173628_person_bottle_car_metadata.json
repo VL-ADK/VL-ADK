@@ -1,0 +1,166 @@
+{
+  "timestamp": "20250927_173628",
+  "prompts": [
+    "person",
+    "bottle",
+    "car"
+  ],
+  "detection_count": 9,
+  "annotations": [
+    {
+      "class": "bottle",
+      "confidence": 0.844743013381958,
+      "bbox": [
+        550,
+        351,
+        604,
+        489
+      ],
+      "center": [
+        577.0,
+        420.0
+      ],
+      "area": 7452,
+      "prompt_index": 1
+    },
+    {
+      "class": "bottle",
+      "confidence": 0.8394221067428589,
+      "bbox": [
+        1009,
+        337,
+        1067,
+        486
+      ],
+      "center": [
+        1038.0,
+        411.5
+      ],
+      "area": 8642,
+      "prompt_index": 1
+    },
+    {
+      "class": "person",
+      "confidence": 0.7425210475921631,
+      "bbox": [
+        1144,
+        63,
+        1271,
+        362
+      ],
+      "center": [
+        1207.5,
+        212.5
+      ],
+      "area": 37973,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.508482813835144,
+      "bbox": [
+        895,
+        275,
+        971,
+        322
+      ],
+      "center": [
+        933.0,
+        298.5
+      ],
+      "area": 3572,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.4736720025539398,
+      "bbox": [
+        1282,
+        12,
+        1476,
+        326
+      ],
+      "center": [
+        1379.0,
+        169.0
+      ],
+      "area": 60916,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.4663144052028656,
+      "bbox": [
+        1460,
+        102,
+        1572,
+        444
+      ],
+      "center": [
+        1516.0,
+        273.0
+      ],
+      "area": 38304,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.438546359539032,
+      "bbox": [
+        768,
+        268,
+        800,
+        359
+      ],
+      "center": [
+        784.0,
+        313.5
+      ],
+      "area": 2912,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.28842365741729736,
+      "bbox": [
+        752,
+        307,
+        896,
+        433
+      ],
+      "center": [
+        824.0,
+        370.0
+      ],
+      "area": 18144,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.26429179310798645,
+      "bbox": [
+        1024,
+        285,
+        1149,
+        435
+      ],
+      "center": [
+        1086.5,
+        360.0
+      ],
+      "area": 18750,
+      "prompt_index": 0
+    }
+  ],
+  "motor_data": {
+    "left_motor": 0.0,
+    "right_motor": 0.0
+  },
+  "frame_timestamp": 1759008988.5317855,
+  "detection_timestamp": 1759008988.8189557,
+  "image_shape": [
+    1232,
+    1640,
+    3
+  ]
+}

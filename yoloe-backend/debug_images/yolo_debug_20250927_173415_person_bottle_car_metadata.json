@@ -1,0 +1,150 @@
+{
+  "timestamp": "20250927_173415",
+  "prompts": [
+    "person",
+    "bottle",
+    "car"
+  ],
+  "detection_count": 8,
+  "annotations": [
+    {
+      "class": "person",
+      "confidence": 0.7260681986808777,
+      "bbox": [
+        1228,
+        14,
+        1432,
+        475
+      ],
+      "center": [
+        1330.0,
+        244.5
+      ],
+      "area": 94044,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.7193559408187866,
+      "bbox": [
+        1412,
+        131,
+        1539,
+        433
+      ],
+      "center": [
+        1475.5,
+        282.0
+      ],
+      "area": 38354,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.6232196688652039,
+      "bbox": [
+        1554,
+        253,
+        1640,
+        465
+      ],
+      "center": [
+        1597.0,
+        359.0
+      ],
+      "area": 18232,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.4756231904029846,
+      "bbox": [
+        932,
+        253,
+        993,
+        326
+      ],
+      "center": [
+        962.5,
+        289.5
+      ],
+      "area": 4453,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.3990185260772705,
+      "bbox": [
+        786,
+        312,
+        898,
+        428
+      ],
+      "center": [
+        842.0,
+        370.0
+      ],
+      "area": 12992,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.3270794451236725,
+      "bbox": [
+        1027,
+        291,
+        1076,
+        340
+      ],
+      "center": [
+        1051.5,
+        315.5
+      ],
+      "area": 2401,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.2761983573436737,
+      "bbox": [
+        751,
+        293,
+        788,
+        426
+      ],
+      "center": [
+        769.5,
+        359.5
+      ],
+      "area": 4921,
+      "prompt_index": 0
+    },
+    {
+      "class": "person",
+      "confidence": 0.275538831949234,
+      "bbox": [
+        1113,
+        84,
+        1192,
+        199
+      ],
+      "center": [
+        1152.5,
+        141.5
+      ],
+      "area": 9085,
+      "prompt_index": 0
+    }
+  ],
+  "motor_data": {
+    "left_motor": 0.0,
+    "right_motor": 0.0
+  },
+  "frame_timestamp": 1759008855.1046624,
+  "detection_timestamp": 1759008855.3971694,
+  "image_shape": [
+    1232,
+    1640,
+    3
+  ]
+}
