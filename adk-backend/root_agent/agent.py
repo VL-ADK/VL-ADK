@@ -2,7 +2,7 @@ import datetime
 from zoneinfo import ZoneInfo
 
 from google.adk.agents import Agent
-from tools import move_backward, move_forward, rotate, scan_environment, stop_robot, view_query
+from tools import clarify_view_with_gemini, move_backward, move_forward, rotate, scan_environment, stop_robot, view_query
 
 root_agent = Agent(
     name="root_agent",
@@ -25,6 +25,7 @@ root_agent = Agent(
         
         Vision Tools:
         - view_query: Search for objects in the camera feed. Provide a list of words to search for.
+        - clarify_view_with_gemini: Ask Gemini for clarification about the current annotated camera image.
         
         Guidelines:
         - Use specific movement tools (move_forward, rotate, etc.) for precise control
@@ -38,5 +39,5 @@ root_agent = Agent(
         Please help the user navigate the robot and provide information about the surrounding area.
         """
     ),
-    tools=[move_forward, move_backward, rotate, scan_environment, stop_robot, view_query],
+    tools=[move_forward, move_backward, rotate, scan_environment, stop_robot, view_query, clarify_view_with_gemini],
 )

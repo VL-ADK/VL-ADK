@@ -84,6 +84,7 @@ def clarify_view_with_gemini(question: str) -> dict:
     IMPORTANT:
       - Use this ONLY for **further clarification** or higher-level reasoning about the scene.
       - Your **primary** tool for detections is `view_query([...])`.
+      - One key phrase for when to use this may be "look closer" or "look further" and other phrases like that.
       - This helper uses `/retrieve-annotated-image` from the YOLO backend and the **current prompts**.
         If you want to target specific classes, call `view_query([...])` first to set/promote those prompts.
 
@@ -103,6 +104,8 @@ def clarify_view_with_gemini(question: str) -> dict:
             "error": str (optional)
         }
     """
+    print(f"[ADK-API] Clarifying view with Gemini: {question}")
+
     # 1) Pull the minimally annotated JPEG (boxes/segments only) as b64
     try:
         yolo_url = "http://localhost:8001/retrieve-annotated-image"
@@ -128,25 +131,42 @@ def clarify_view_with_gemini(question: str) -> dict:
     if not api_key:
         return {"question": question, "error": "Missing GOOGLE_API_KEY environment variable"}
 
-    # Default fast model; tweak if you prefer 'gemini-1.5-pro'
-    model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    # Default fast model; use the newer 2.5 Flash model
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     try:
         if _GENAI_MODE == "google-genai":
             # New SDK
             client = _genai_new.Client(api_key=api_key)
+
             img_part = _genai_types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")
-            result = client.responses.generate(
-                model=model_name,
-                input=[img_part, _genai_types.Part.from_text(question)],
-            )
-            # The new SDK returns a slightly different shape
+            text_part = _genai_types.Part.from_text(text=question)
+
+            response = client.models.generate_content(model=model_name, contents=[text_part, img_part])
+
+            # Extract answer text from response
             answer_text = ""
-            if hasattr(result, "output_text"):
-                answer_text = result.output_text
-            elif hasattr(result, "candidates") and result.candidates:
-                # Best-effort extraction
-                answer_text = getattr(result.candidates[0], "content", {}).get("parts", [{}])[0].get("text", "")
+            if hasattr(response, "text") and response.text:
+                answer_text = response.text
+            elif hasattr(response, "candidates") and response.candidates:
+                candidate = response.candidates[0]
+
+                if hasattr(candidate, "content") and candidate.content:
+                    if hasattr(candidate.content, "parts") and candidate.content.parts:
+                        for i, part in enumerate(candidate.content.parts):
+                            if hasattr(part, "text"):
+                                answer_text = part.text
+                                break
+
+            if not answer_text:
+                return {
+                    "question": question,
+                    "error": "No text content found in Gemini response",
+                    "debug_response_type": str(type(response)),
+                    "debug_response_attrs": [attr for attr in dir(response) if not attr.startswith("_")],
+                    "used_sdk": "google-genai",
+                }
+
             return {
                 "question": question,
                 "answer": answer_text,
@@ -161,19 +181,28 @@ def clarify_view_with_gemini(question: str) -> dict:
             # Legacy SDK
             _genai_old.configure(api_key=api_key)
             model = _genai_old.GenerativeModel(model_name)
-            # Send as image bytes + question
-            # SDK accepts dict with mime_type/data or just bytes in some versions
-            result = model.generate_content([{"mime_type": "image/jpeg", "data": img_bytes}, question])
-            # Extract text
-            answer_text = getattr(result, "text", None)
-            if not answer_text and getattr(result, "candidates", None):
-                # Best-effort extraction
-                parts = result.candidates[0].content.parts
-                if parts:
-                    answer_text = getattr(parts[0], "text", None) or str(parts[0])
+
+            # Create proper content list with image and text
+            content_parts = [{"mime_type": "image/jpeg", "data": img_bytes}, question]
+
+            result = model.generate_content(content_parts)
+
+            # Extract text from response
+            answer_text = ""
+            if hasattr(result, "text") and result.text:
+                answer_text = result.text
+            elif hasattr(result, "candidates") and result.candidates:
+                candidate = result.candidates[0]
+                if hasattr(candidate, "content") and candidate.content:
+                    if hasattr(candidate.content, "parts") and candidate.content.parts:
+                        for part in candidate.content.parts:
+                            if hasattr(part, "text") and part.text:
+                                answer_text = part.text
+                                break
+
             return {
                 "question": question,
-                "answer": answer_text or "",
+                "answer": answer_text,
                 "model": model_name,
                 "yolo_count": yolo_json.get("count"),
                 "yolo_prompts": yolo_json.get("prompts", []),
@@ -185,7 +214,7 @@ def clarify_view_with_gemini(question: str) -> dict:
             return {"question": question, "error": "Neither 'google-genai' nor 'google-generativeai' package is installed."}
 
     except Exception as e:
-        return {"question": question, "error": f"Gemini request failed: {e}"}
+        return {"question": question, "error": f"Gemini request failed: {type(e).__name__}: {e}", "sdk_mode": _GENAI_MODE, "model": model_name}
 
 
 def move_forward(speed: float, duration: float) -> dict:
