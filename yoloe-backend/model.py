@@ -72,8 +72,9 @@ class YoloModelManager:
                     "message": "YOLO-E model not loaded"
                 }
             
-            # Set prompts on model (same as working example)
-            self.model.set_prompts(prompts)
+            # Set classes with the text embeddings
+            text_embeddings = self.model.get_text_pe(prompts)
+            self.model.set_classes(prompts, text_embeddings)
             self.current_prompts = prompts.copy()
             print(f"Set YOLO-E prompts to: {prompts}")
             return {
