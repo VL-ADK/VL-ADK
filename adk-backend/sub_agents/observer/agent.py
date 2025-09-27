@@ -1,5 +1,6 @@
 from google.adk.agents import Agent
-from tools import clarify_view_with_gemini, view_query
+
+from .shared_tools import clarify_view_with_gemini, view_query
 
 observer = Agent(
     name="observer",
