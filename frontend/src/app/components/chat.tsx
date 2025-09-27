@@ -45,15 +45,16 @@ export function Chat({session}: {session: SessionToken | null}) {
                     p.forEach((o:any)=>{
                         if(!o.partial)
                         o.content.parts.forEach((part:any)=>{
+                            let res = `[${o.author.toUpperCase()}] `;
                             if(part.text != null)
                             {
-                                agentFeedback.push(buildMessage(part.text));
+                                agentFeedback.push(buildMessage(res + part.text));
                                 setMessages([...messages, usr, ...agentFeedback]);
                             }
                                 
                             if(part.functionCall != null)
                             {
-                                let res =`Called (${part.functionCall.name}): `;
+                                res +=`Called (${part.functionCall.name}): `;
                                 /*
                                 (part.functionCall.args as any[]).forEach((arg:any)=>{
                                     res += arg.toString() + " ";
@@ -65,7 +66,7 @@ export function Chat({session}: {session: SessionToken | null}) {
         
                             if(part.functionResponse != null)
                             {
-                                let res =`Recieved (${part.functionResponse.name}): `;
+                                res +=`Recieved (${part.functionResponse.name}): `;
                                 /*
                                 (part.functionResponse.response as any[]).forEach((arg:any)=>{
                                     res += arg.toString() + " ";
