@@ -303,6 +303,46 @@ class WebSocketViewer:
         self.running = False
         self.latest_frame = None
         self.frame_lock = threading.Lock()
+        self.base_prompts = ["person", "bottle", "car", "chair"]  # Base set of prompts
+        self.current_removed_word_index = -1  # -1 means no word removed
+        self.last_prompt_change = time.time()
+        self.prompt_change_interval = 3.0  # 3 seconds
+    
+    def _cycle_prompts(self):
+        """Cycle through removing words from prompts."""
+        current_time = time.time()
+        
+        # Check if it's time to change prompts
+        if current_time - self.last_prompt_change >= self.prompt_change_interval:
+            self.last_prompt_change = current_time
+            
+            # Cycle to next word to remove
+            self.current_removed_word_index += 1
+            
+            # If we've cycled through all words, start over with no word removed
+            if self.current_removed_word_index >= len(self.base_prompts):
+                self.current_removed_word_index = -1
+            
+            # Build current prompts (remove one word if index is valid)
+            if self.current_removed_word_index == -1:
+                current_prompts = self.base_prompts.copy()
+                action = "Added all words back"
+            else:
+                current_prompts = [word for i, word in enumerate(self.base_prompts) 
+                                 if i != self.current_removed_word_index]
+                removed_word = self.base_prompts[self.current_removed_word_index]
+                action = f"Removed '{removed_word}'"
+            
+            # Update prompts via API
+            try:
+                result = set_prompts(current_prompts)
+                if result.get("success", False):
+                    print(f"Prompt change: {action}")
+                    print(f"   Current prompts: {current_prompts}")
+                else:
+                    print(f"Failed to update prompts: {result.get('message', 'Unknown error')}")
+            except Exception as e:
+                print(f"Error updating prompts: {e}")
         
     def start_viewer(self):
         """Start the WebSocket viewer in a separate thread."""
@@ -375,7 +415,18 @@ class WebSocketViewer:
         frame_count = 0
         last_detection_count = 0
         
+        # Set initial prompts
+        print("Setting initial prompts...")
+        initial_result = set_prompts(self.base_prompts)
+        if initial_result.get("success", False):
+            print(f"Initial prompts set: {self.base_prompts}")
+        else:
+            print(f"Failed to set initial prompts: {initial_result.get('message', 'Unknown error')}")
+        
         while self.running:
+            # Cycle prompts every 3 seconds
+            self._cycle_prompts()
+            
             with self.frame_lock:
                 frame_data = self.latest_frame
             
@@ -444,10 +495,21 @@ class WebSocketViewer:
 def start_websocket_viewer():
     """Start the WebSocket viewer."""
     print("\n" + "="*50)
-    print("STARTING WEBSOCKET VIEWER")
+    print("STARTING WEBSOCKET VIEWER WITH PROMPT CYCLING")
     print("="*50)
     print("This will open a CV2 window showing the annotated stream")
-    print("Press 'q' to quit, 's' to save current frame")
+    print("Prompts will cycle every 3 seconds:")
+    print("   - Start: All prompts ['person', 'bottle', 'car', 'chair']")
+    print("   - Remove 'person' for 3s")
+    print("   - Add back 'person', remove 'bottle' for 3s") 
+    print("   - Add back 'bottle', remove 'car' for 3s")
+    print("   - Add back 'car', remove 'chair' for 3s")
+    print("   - Add back 'chair' (full cycle complete)")
+    print("   - Repeat cycle...")
+    print("")
+    print("Controls:")
+    print("  Press 'q' to quit")
+    print("  Press 's' to save current frame")
     
     viewer = WebSocketViewer(YOLO_WEBSOCKET_URL)
     viewer.start_viewer()
