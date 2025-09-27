@@ -7,6 +7,7 @@ class RobotControlMessage(BaseModel):
     status: str
     speed: Optional[float] = None
     duration: Optional[float] = None
+    angle: Optional[float] = None
 
 
 class WebSocketMessage(BaseModel):
