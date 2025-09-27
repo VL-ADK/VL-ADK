@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { VideoStream } from "./components/videostream";
+import { VideoStream, YOLOObject } from "./components/videostream";
 import { Chat } from "./components/chat";
 import { Radar } from "./components/radar";
 import { AgentGraph } from "./components/agentgraph";
@@ -16,6 +16,7 @@ export default function Home() {
   const [motorData, setMotorData] = useState<MotorData | null>(null);
   const [control, setControl] = useState<ControlSchema | null>(null);
   const [session, setSession] = useState<SessionToken | null>(null);
+  const [yoloObjects, setYoloObjects] = useState<YOLOObject[]>([{x: 100, y: 100, width: 100, height: 100, label: "test"}]);
 
   const AGENT_GRAPH = 0;
   const RADAR = 1;
@@ -93,7 +94,7 @@ export default function Home() {
       </div>
       <div className="h-full grid grid-cols-2 gap-1 bg-gradient-to-b from-[#364153] to-[#27303e] border-[#27303e] shadow-md border-2 rounded-md p-1">
         <div className="flex flex-col h-full gap-1 col-span-1">
-          <VideoStream image={image}/>
+          <VideoStream image={image} yoloObjects={yoloObjects}/>
         </div>
         <div className="size-full grid grid-cols-3 gap-1">
           <div className="col-span-2 grid grid-rows-3 gap-1">
