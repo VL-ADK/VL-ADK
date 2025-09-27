@@ -40,7 +40,7 @@ except ImportError as e:
 API_HOST = "127.0.0.1"
 API_PORT = 8001
 WEBSOCKET_URL = "ws://localhost:8890"
-YOLO_MODEL_PATH = "yoloe-l.pt"  # Use large model like working example
+YOLO_MODEL_PATH = "yoloe-l.pt"
 
 # Initialize FastAPI
 app = FastAPI(title="YOLOE Backend", description="YOLO Object Detection for VL-ADK", version="0.1.0")

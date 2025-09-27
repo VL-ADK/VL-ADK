@@ -63,6 +63,10 @@ class Api:
     
     def _setup_routes(self):
         """Setup all API routes with the robot actions."""
+
+        @self.app_post("/scan")
+        def api_scan(speed: float = 0.5):
+            
         @self.app.post("/forward/")
         def api_forward(speed: float = 0.5, duration: float = None):
             print(f"Moving forward at speed {speed} for {duration} seconds")
