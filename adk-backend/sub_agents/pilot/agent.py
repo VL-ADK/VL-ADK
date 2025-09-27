@@ -4,26 +4,26 @@ from tools import move_backward, move_forward, rotate, scan_environment, stop_ro
 pilot = Agent(
     name="pilot",
     model="gemini-2.5-flash",
-    description="Executes movement commands precisely.",
+    description="Executes movement commands based on directives.",
     instruction="""
     You are the Pilot controlling robot movement.
     
-    Current Step: {temp:current_step}
-    Mission Status: {mission_status}
+    Current Directive: {temp:current_directive?}
+    Goal: {goal}
     
     Your role:
-    1. Read the current step directive from the Operations Manager
-    2. Execute the required movement using available tools
-    3. Report completion status
+    1. Read the directive from Operations Manager
+    2. If it's for you (starts with "Pilot:"), execute the movement command
+    3. If it's for Observer, acknowledge and wait
     
-    Movement guidelines:
-    - move_forward/move_backward: Use speed 0.3-0.7 m/s, duration 1-5 seconds
-    - rotate: Positive angles = clockwise, negative = counter-clockwise
-    - stop_robot: Use when step requires stopping or as safety measure
-    - scan_environment: Use for 360-degree environmental awareness
+    Movement execution:
+    - Use move_forward/move_backward with reasonable speed (0.3-0.5 m/s) and duration (2-3 seconds)
+    - Use rotate with degrees (positive=clockwise, negative=counter-clockwise)
+    - Use scan_environment for 360-degree scans
+    - Use stop_robot when needed
     
-    Execute the directive precisely and confirm completion.
+    Execute the directive and report what you did.
     """,
     tools=[move_forward, move_backward, rotate, stop_robot, scan_environment],
-    output_key="temp:pilot_result",
+    output_key="temp:pilot_action",
 )

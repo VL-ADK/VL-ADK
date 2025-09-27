@@ -10,17 +10,17 @@ strategist = Agent(
     Goal: {goal}
     Mission Status: {mission_status}
     
-    Your role:
-    1. Analyze the user's goal and break it into atomic, executable steps
-    2. Consider robot capabilities: movement (forward/backward/rotate), vision (search/clarify), scanning
-    3. Create a logical sequence that achieves the objective
+    Analyze the user's goal and create a detailed, step-by-step plan in plain text.
     
-    Create a plan with these steps:
-    - Each step should have: id, action_type, details, status="pending"
-    - Action types: "move", "observe", "scan", "analyze"
-    - Keep steps simple and achievable
+    Robot capabilities:
+    - Movement: move_forward, move_backward, rotate, stop_robot
+    - Vision: view_query (search for objects), clarify_view_with_gemini (analysis)
+    - Scanning: scan_environment (360-degree scan)
     
-    Update mission_status to "executing" when plan is complete.
+    Write a clear, natural language plan that describes exactly how to achieve the goal.
+    Be specific about what actions to take and in what order.
+    
+    End your plan by stating: "Mission status: executing"
     """,
     output_key="temp:execution_plan",
 )

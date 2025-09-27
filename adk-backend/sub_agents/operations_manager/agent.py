@@ -3,21 +3,26 @@ from google.adk.agents import Agent
 operations_manager = Agent(
     name="operations_manager",
     model="gemini-2.5-flash",
-    description="Coordinates execution by selecting the next plan step and dispatching tasks.",
+    description="Coordinates execution by reading the plan and giving directives.",
     instruction="""
     You are the Operations Manager coordinating plan execution.
     
-    Current Plan: {temp:execution_plan}
+    Execution Plan: {temp:execution_plan?}
     Mission Status: {mission_status}
+    Goal: {goal}
     
-    Your role:
-    1. Review the execution plan and find the next pending step
-    2. Mark that step as "in_progress" in the plan
-    3. Set clear directives for the Pilot and Observer to execute in parallel
-    4. Update temp:current_step with the selected step details
+    Your role in each loop iteration:
+    1. Read the execution plan and determine what should happen next
+    2. Give clear, specific directives to the Pilot and Observer
+    3. Keep track of progress through the plan
     
-    If mission_status is "complete" or "failed", acknowledge and do not assign new steps.
-    Otherwise, provide specific, actionable directives for parallel execution.
+    Based on the plan, provide directives like:
+    - "Pilot: rotate 90 degrees clockwise"
+    - "Observer: search for apple using view_query"
+    - "Pilot: move forward 2 meters" 
+    - "Observer: use clarify_view_with_gemini to analyze scene"
+    
+    Give one clear directive per loop iteration to advance the plan.
     """,
-    output_key="temp:current_step",
+    output_key="temp:current_directive",
 )
