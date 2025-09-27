@@ -7,7 +7,7 @@ import { AgentGraph } from "./components/agentgraph";
 import { PlanChart } from "./components/planchart";
 import { ControlSchema, Message, MotorData, wsURL } from "./websocket";
 import { useEffect, useRef, useState } from "react";
-import { SessionToken, startSession } from "./endpoints";
+import { eStop, SessionToken, startSession } from "./endpoints";
 import Motor from "./components/motor";
 
 export default function Home() {
@@ -77,7 +77,7 @@ export default function Home() {
           </div>
         </div>
         <div className="flex flex-row gap-4 text-sm font-normal">
-          <button type="button" className={`bg-red-800 border-b-2 border-red-700 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-red-900 shadow-sm`}>
+          <button type="button" onClick={() => eStop()} className={`bg-red-700 border-b-3 border-red-800 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-red-900 shadow-sm`}>
             EMERGENCY STOP
           </button>
           <button type="button" onClick={() => {
@@ -86,7 +86,7 @@ export default function Home() {
               setSession(session);
               console.log(session);
             });
-          }} className={`bg-green-800 border-b-2 border-green-700 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 shadow-sm`}>
+          }} className={`bg-green-700 border-b-3 border-green-800 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 shadow-sm`}>
             RESET SESSION
           </button>
         </div>
@@ -99,13 +99,13 @@ export default function Home() {
           <div className="col-span-2 grid grid-rows-3 gap-1">
             <div className="row-span-2 flex flex-col gap-1 size-full">
               <div className="flex flex-row gap-2 text-xs">
-                <button type="button" onClick={() => setTab(AGENT_GRAPH)} className={`bg-green-800 border-b-2 border-green-700 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 ${tab === AGENT_GRAPH ? "bg-green-900 border-green-900 shadow-none" : "shadow-sm"}`}>
+                <button type="button" onClick={() => setTab(AGENT_GRAPH)} className={`bg-green-700 border-b-3 border-green-800 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 ${tab === AGENT_GRAPH ? "bg-green-900 border-green-900 shadow-none" : "shadow-sm"}`}>
                   AGENT GRAPH
                 </button>
-                <button type="button" onClick={() => setTab(RADAR)} className={`bg-green-800 border-b-2 border-green-700 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 ${tab === RADAR ? "bg-green-900 border-green-900" : "shadow-sm"}`}>
+                <button type="button" onClick={() => setTab(RADAR)} className={`bg-green-700 border-b-3 border-green-800 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 ${tab === RADAR ? "bg-green-900 border-green-900" : "shadow-sm"}`}>
                   RADAR
                 </button>
-                <button type="button" onClick={() => setTab(MOTOR_DATA)} className={`bg-green-800 border-b-2 border-green-700 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 ${tab === MOTOR_DATA ? "bg-green-900 border-green-900 shadow-none" : "shadow-sm"}`}>
+                <button type="button" onClick={() => setTab(MOTOR_DATA)} className={`bg-green-700 border-b-3 border-green-800 rounded-sm p-1 px-2 text-white my-auto cursor-pointer duration-100 hover:bg-green-900 ${tab === MOTOR_DATA ? "bg-green-900 border-green-900 shadow-none" : "shadow-sm"}`}>
                   MOTOR DATA
                 </button>
               </div>

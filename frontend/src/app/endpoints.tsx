@@ -45,3 +45,14 @@ export const sendPrompt = async (session:SessionToken, prompt: string) => {
     console.log(response);
     return response.body as ReadableStream<Uint8Array>;
 };
+
+export const eStop = async () => {
+    try {
+        await fetch(`http://localhost:8889/stop/`, {
+            method: "POST",
+        });
+    } catch (error) {
+        // Ignore CORS and other network errors
+        console.log("eStop request completed (CORS errors ignored)");
+    }
+}
