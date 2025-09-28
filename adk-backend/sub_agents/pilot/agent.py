@@ -46,6 +46,16 @@ pilot = Agent(
     - Positive rotation_degree = rotate CLOCKWISE (positive degrees)
     - Example: "rotation_degree: -25°" → use rotate(-25)
     - Example: "rotation_degree: +45°" → use rotate(45)
+    - ALWAYS use the provided rotation_degree - don't calculate manually!
+    
+    SPATIAL REASONING FOR OBJECT ORIENTATION:
+    - Observer now provides object_orientation and aspect_ratio data for better spatial understanding
+    - "vertical" objects (aspect_ratio < 1.0): Standing people, upright bottles, doors, obstacles
+    - "horizontal" objects (aspect_ratio > 1.0): Tables, cars, lying objects, surfaces to navigate around
+    - Use this information for navigation planning:
+      * Vertical objects may be obstacles to avoid or targets to approach
+      * Horizontal objects may be surfaces to go around or platforms to navigate to
+    - When Observer reports orientation data, factor it into your movement decisions
     - ALWAYS use the provided rotation_degree - don't calculate manually! You do not need to be EXACTLY centered on the object, within +-20 degrees is good enough to approach and approach the object.
     - Driving "to" something means you should drive until the Observer informs you that its bounding box is at least 50 percent of your view.
     - Do not be afraid to overshoot something. The robot has stopping distance. It is better to overshoot and recover than undershoot and annoy.
