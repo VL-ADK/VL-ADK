@@ -227,6 +227,8 @@ export function Chat({ session }: { session: SessionToken | null }) {
     const streamingTextRef = useRef<string>(""); // accumulates partial text
     const hasStreamedRef = useRef<boolean>(false); // received partials
     const currentAuthorRef = useRef<string | undefined>(undefined); // author for current reply
+    const lastProcessedTextRef = useRef<string>(""); // prevent duplicate TTS
+    const processedEventsRef = useRef<Set<string>>(new Set()); // prevent duplicate SSE events
 
     // Silence-to-send timer (voice)
     const lastLenRef = useRef<number>(0);
@@ -270,6 +272,31 @@ export function Chat({ session }: { session: SessionToken | null }) {
         // Clean up text for TTS
         const cleanText = text.replace(/\[.*?\]/g, "").trim(); // Remove [AGENT] prefixes
         if (!cleanText) return;
+
+        // Prevent duplicate entries - check if we just processed this exact text
+        if (lastProcessedTextRef.current === cleanText) {
+            console.log(
+                "Skipping duplicate TTS entry (same as last processed):",
+                cleanText
+            );
+            return;
+        }
+
+        // Prevent duplicate entries - check if the same text is already in the queue
+        const isDuplicate = ttsQueueRef.current.some(
+            (item) => item.text === cleanText && item.voice === voice
+        );
+
+        if (isDuplicate) {
+            console.log(
+                "Skipping duplicate TTS entry (already in queue):",
+                cleanText
+            );
+            return;
+        }
+
+        console.log("Adding to TTS queue:", cleanText, "with voice:", voice);
+        lastProcessedTextRef.current = cleanText;
         ttsQueueRef.current.push({ text: cleanText, voice });
         runTTSWorker();
     };
@@ -324,7 +351,12 @@ export function Chat({ session }: { session: SessionToken | null }) {
         } finally {
             ttsPlayingRef.current = false;
             setSpeaking(false);
-            runTTSWorker(); // play next
+
+            // Only continue if there are more items in the queue
+            if (ttsQueueRef.current.length > 0) {
+                // Use setTimeout to prevent stack overflow
+                setTimeout(() => runTTSWorker(), 100);
+            }
         }
     };
 
@@ -342,6 +374,8 @@ export function Chat({ session }: { session: SessionToken | null }) {
         streamingTextRef.current = "";
         hasStreamedRef.current = false;
         currentAuthorRef.current = undefined;
+        lastProcessedTextRef.current = "";
+        processedEventsRef.current.clear();
 
         setLoading(true);
 
@@ -357,7 +391,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
                 if (done) {
                     setLoading(false);
 
-                    // If we streamed tokens, enqueue TTS for the composed text once
+                    // Finalize any remaining streamed text with TTS
                     if (hasStreamedRef.current && streamingTextRef.current) {
                         const finalText = streamingTextRef.current;
                         const voice = voiceForAuthor(currentAuthorRef.current);
@@ -384,6 +418,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
 
                     try {
                         const obj = JSON.parse(cleanLine);
+                        console.log("SSE Event received:", obj);
                         handleSSEEvent(obj);
                     } catch (e) {
                         // Skip malformed JSON lines
@@ -407,6 +442,38 @@ export function Chat({ session }: { session: SessionToken | null }) {
     // Handle one SSE JSON event (avoids duplicates)
     const handleSSEEvent = (o: any) => {
         if (!o) return;
+
+        // Create a unique key for this event to prevent duplicates
+        const eventKey = JSON.stringify({
+            author: o.author,
+            partial: o.partial,
+            content: o.content,
+            timestamp: o.timestamp,
+            id: o.id,
+        });
+
+        // Skip if we've already processed this exact event
+        if (processedEventsRef.current.has(eventKey)) {
+            console.log("Skipping duplicate SSE event:", eventKey);
+            return;
+        }
+
+        // Mark this event as processed
+        processedEventsRef.current.add(eventKey);
+
+        // Limit the size of the processed events set to prevent memory leaks
+        if (processedEventsRef.current.size > 100) {
+            const firstKey = processedEventsRef.current.values().next().value;
+            processedEventsRef.current.delete(firstKey);
+        }
+
+        console.log("Processing SSE event:", {
+            author: o.author,
+            partial: o.partial,
+            hasContent: !!o.content,
+            hasParts: !!(o.content && o.content.parts),
+            partsLength: o.content?.parts?.length || 0,
+        });
 
         // Extract all text parts in this event
         const parts: string[] = [];
@@ -438,7 +505,6 @@ export function Chat({ session }: { session: SessionToken | null }) {
         const joined = parts.join("");
 
         const author = String(o.author || "agent");
-        currentAuthorRef.current = author;
 
         // Dispatch custom event for agent graph
         if (typeof window !== "undefined") {
@@ -449,9 +515,30 @@ export function Chat({ session }: { session: SessionToken | null }) {
             );
         }
 
+        // Check if this is a new agent (different from current streaming agent)
+        const isNewAgent =
+            currentAuthorRef.current && currentAuthorRef.current !== author;
+
         // Partial token event: update one bubble, accumulate text
         if (o.partial === true) {
+            // If new agent, finalize previous agent's message and start new one
+            if (
+                isNewAgent &&
+                hasStreamedRef.current &&
+                streamingTextRef.current
+            ) {
+                // Finalize previous agent's message with TTS
+                const prevText = streamingTextRef.current;
+                const prevVoice = voiceForAuthor(currentAuthorRef.current);
+                enqueueTTS(prevText, prevVoice);
+
+                // Reset for new agent
+                streamingTextRef.current = "";
+                hasStreamedRef.current = false;
+            }
+
             hasStreamedRef.current = true;
+            currentAuthorRef.current = author;
             streamingTextRef.current += joined;
             updateLastAgentMessage(
                 `[${author.toUpperCase()}] ${streamingTextRef.current}`
@@ -460,13 +547,19 @@ export function Chat({ session }: { session: SessionToken | null }) {
         }
 
         // Non-partial (final) event:
-        // If we already streamed text, ignore appending final (to avoid dupes).
+        // If we already streamed text, finalize it with TTS
         if (hasStreamedRef.current) {
             // But if there was somehow no accumulated text, use this
             if (!streamingTextRef.current) {
                 const msg = `[${author.toUpperCase()}] ${joined}`;
                 appendMessages(buildAgentMessage(msg));
                 if (ttsEnabled) enqueueTTS(joined, voiceForAuthor(author));
+            } else {
+                // Finalize the accumulated text with TTS (only if not already processed)
+                const finalText = streamingTextRef.current;
+                const voice = voiceForAuthor(currentAuthorRef.current);
+                console.log("Finalizing streamed text with TTS:", finalText);
+                enqueueTTS(finalText, voice);
             }
             return;
         }
@@ -486,12 +579,14 @@ export function Chat({ session }: { session: SessionToken | null }) {
     // Reset on session change
     useEffect(() => {
         setMessages([]);
-        inputRef.current && (inputRef.current.value = "");
+        if (inputRef.current) inputRef.current.value = "";
         setCanSend(false);
         setMicArmed(false);
         streamingTextRef.current = "";
         hasStreamedRef.current = false;
         currentAuthorRef.current = undefined;
+        lastProcessedTextRef.current = "";
+        processedEventsRef.current.clear();
         ttsQueueRef.current = [];
         ttsPlayingRef.current = false;
         setSpeaking(false);

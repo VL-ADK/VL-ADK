@@ -491,3 +491,24 @@ def scan_environment_tool(query: list[str]) -> dict:
 
 
 scan_environment = FunctionTool(func=scan_environment_tool)
+
+
+def get_bounding_box_percentage_tool(bbox: list[int]) -> dict:
+    """Get the percentage of the camera view that is covered by the bounding box.
+
+    Args:
+        bbox (list[int]): The bounding box of the object.
+
+    Returns:
+        float: The percentage of the camera view that is covered by the bounding box.
+    """
+    # Camera aspect is 1640x1232
+    camera_area = 1640 * 1232
+    # Bounding box is in the format [top_left, bottom_left, top_right, bottom_right]
+    bbox_area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+    print(f"[ADK-API] Bounding box: {bbox}")
+    print(f"[ADK-API] Bounding box area: {bbox_area}, Camera area: {camera_area}")
+    return (bbox_area / camera_area) * 100
+
+
+get_bounding_box_percentage = FunctionTool(func=get_bounding_box_percentage_tool)

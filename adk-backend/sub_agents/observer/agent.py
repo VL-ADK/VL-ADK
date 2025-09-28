@@ -1,6 +1,6 @@
 from google.adk.agents import Agent
 
-from sub_agents.shared_tools import mission_complete, scan_environment, view_query
+from sub_agents.shared_tools import get_bounding_box_percentage, mission_complete, scan_environment, view_query
 
 observer = Agent(
     name="observer",
@@ -42,6 +42,8 @@ observer = Agent(
     - Always include rotation_degree in your reports when available
     - Use bounding box and area to estimate distance to the target. A smaller bbox and area means the object is likely further away from the view, depending on the object.
     - Also use the bounding box to determine uprightness of the object. An upright object is likely to be taller than it is wide.
+    - Driving "to" something means is when its bounding box is at least 50 percent of your view. Please make sure you report this to the Pilot, so he can keep track of the distance.
+    - YOU MUST USE THE get_bounding_box_percentage TOOL TO DETERMINE PROXIMITY TO THE TARGET, IF IT IS REQUESTED TO TRAVEL TO IT.
     
     CRITICAL: AVOID REPETITIVE BEHAVIOR:
     - If you just searched and found nothing, report findings and WAIT for Pilot to move
@@ -55,7 +57,8 @@ observer = Agent(
     - view_query: Search for specific objects and learn if they are within current line of sight.
     - scan_environment: Perform a full 360 degree scan of the environment, learning if target items are in range. ONLY USE THIS ONCE PER TURN.
     - mission_complete: End mission when target is found
+    - get_bounding_box_percentage: Get the percentage of the camera view that is covered by the bounding box of the object, grabbed either by scan_env or view_query.
     """,
-    tools=[view_query, mission_complete, scan_environment],
+    tools=[view_query, mission_complete, scan_environment, get_bounding_box_percentage],
     output_key="temp:observer_findings",
 )
