@@ -5,53 +5,45 @@ export function AgentGraph() {
     const [activeAgent, setActiveAgent] = useState<string>("");
     const [activeTool, setActiveTool] = useState<string>("");
 
-    // Listen for agent activity in the console
+    // Listen for agent activity via custom events instead of console interception
     useEffect(() => {
-        const originalLog = console.log;
-        console.log = (...args) => {
-            const message = args.join(" ");
+        const handleAgentActivity = (event: CustomEvent) => {
+            const { author, toolName } = event.detail;
 
-            // Detect agent activity from SSE data
-            if (message.includes('"author":"director"')) {
-                setActiveAgent("director");
-                setTimeout(() => setActiveAgent(""), 1500);
-            } else if (message.includes('"author":"observer"')) {
-                setActiveAgent("observer");
-                setTimeout(() => setActiveAgent(""), 1500);
-            } else if (message.includes('"author":"pilot"')) {
-                setActiveAgent("pilot");
+            if (author) {
+                setActiveAgent(author);
                 setTimeout(() => setActiveAgent(""), 1500);
             }
 
-            // Detect tool usage
-            if (message.includes('"name":"rotate_tool"')) {
-                setActiveTool("rotate");
-                setTimeout(() => setActiveTool(""), 1000);
-            } else if (message.includes('"name":"move_forward_tool"')) {
-                setActiveTool("move_forward");
-                setTimeout(() => setActiveTool(""), 1000);
-            } else if (message.includes('"name":"move_backward_tool"')) {
-                setActiveTool("move_backward");
-                setTimeout(() => setActiveTool(""), 1000);
-            } else if (message.includes('"name":"view_query_tool"')) {
-                setActiveTool("view_query");
-                setTimeout(() => setActiveTool(""), 1000);
-            } else if (message.includes('"name":"mission_complete_tool"')) {
-                setActiveTool("mission_complete");
-                setTimeout(() => setActiveTool(""), 1000);
-            } else if (message.includes('"name":"scan_environment_tool"')) {
-                setActiveTool("scan_environment");
-                setTimeout(() => setActiveTool(""), 1000);
-            } else if (message.includes('"name":"initialize_mission_tool"')) {
-                setActiveTool("initialize_mission");
-                setTimeout(() => setActiveTool(""), 1000);
-            }
+            if (toolName) {
+                const toolMap: Record<string, string> = {
+                    rotate_tool: "rotate",
+                    move_forward_tool: "move_forward",
+                    move_backward_tool: "move_backward",
+                    view_query_tool: "view_query",
+                    mission_complete_tool: "mission_complete",
+                    scan_environment_tool: "scan_environment",
+                    initialize_mission_tool: "initialize_mission",
+                };
 
-            originalLog.apply(console, args);
+                const displayName = toolMap[toolName];
+                if (displayName) {
+                    setActiveTool(displayName);
+                    setTimeout(() => setActiveTool(""), 1000);
+                }
+            }
         };
 
+        window.addEventListener(
+            "agentActivity",
+            handleAgentActivity as EventListener
+        );
+
         return () => {
-            console.log = originalLog;
+            window.removeEventListener(
+                "agentActivity",
+                handleAgentActivity as EventListener
+            );
         };
     }, []);
 
