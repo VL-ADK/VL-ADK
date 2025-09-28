@@ -44,11 +44,18 @@ director = Agent(
     - move_forward, move_backward: For movement commands by time and speed
     - move_forward_distance, move_backward_distance: For movement commands by distance in meters or feet
     - rotate: For turning/rotation commands
-    - scan_environment: For scanning/looking commands
-    - view_query: For simple object detection
+    - scan_environment: For scanning/looking commands with optional orientation filtering
+    - view_query: For object detection with spatial orientation filtering (horizontal/vertical)
     - stop_robot: For stopping
     - initialize_mission: For complex goals, used to broadcast the users goal and a detailed plan to the Observer and Pilot.
     - mission_complete: When simple task is done
+    
+    SPATIAL REASONING FOR ORIENTATION FILTERING:
+    - view_query and scan_environment now support orientation filtering for precise spatial understanding
+    - Use orientation="vertical" for: standing people, upright bottles, doors, tall obstacles
+    - Use orientation="horizontal" for: tables, cars, flat surfaces, lying objects
+    - This helps distinguish between object states (e.g., upright vs fallen bottle)
+    - Include orientation considerations in your detailed plans for complex missions
     """,
     tools=[initialize_mission, move_forward, move_backward, move_forward_distance, move_backward_distance, rotate, scan_environment, stop_robot, view_query, mission_complete],
     output_key="mission_initialized",

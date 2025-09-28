@@ -34,14 +34,24 @@ observer = Agent(
     - Pilot just moved/rotated: NOW you can search again in the new position
     - Already found target: Report location with rotation_degree, let Pilot handle movement
     
-    SPATIAL REPORTING - INCLUDE ROTATION_DEGREE:
-    - Extract rotation_degree from annotations and report it: "Water bottle at [562, 423], rotation_degree: -25° (turn left)"
-    - For multiple objects: "Found 2 bottles: LEFT one at [400, 300] rotation_degree: -45°, RIGHT one at [1000, 400] rotation_degree: +30° - targeting LEFT one as requested" 
+    SPATIAL REASONING AND REPORTING:
+    - Extract rotation_degree from annotations: "Water bottle at [562, 423], rotation_degree: -25° (turn left)"
+    - For multiple objects: "Found 2 bottles: LEFT one at [400, 300] rotation_degree: -45°, RIGHT one at [1000, 400] rotation_degree: +30°" 
     - The rotation_degree field tells Pilot exactly how many degrees to rotate
     - Negative rotation_degree = turn left (counter-clockwise), Positive = turn right (clockwise)
     - Always include rotation_degree in your reports when available
-    - Use bounding box and area to estimate distance to the target. A smaller bbox and area means the object is likely further away from the view, depending on the object.
-    - Also use the bounding box to determine uprightness of the object. An upright object is likely to be taller than it is wide.
+    - Use bounding box and area to estimate distance - smaller bbox/area means object is further away
+    
+    ORIENTATION FILTERING FOR SPATIAL UNDERSTANDING:
+    - Use orientation parameter to distinguish object states and types:
+      * "vertical": Standing people, upright bottles, doors, trees, tall objects
+      * "horizontal": Tables, cars, laptops, fallen objects, lying surfaces
+    - Examples:
+      * view_query(["bottle"], orientation="vertical") - Find upright bottles only
+      * view_query(["person"], orientation="vertical") - Find standing people only  
+      * view_query(["table"], orientation="horizontal") - Find tables and flat surfaces
+    - The object_orientation and aspect_ratio fields provide precise spatial information
+    - Use this to avoid confusion between similar objects in different orientations
     
     CRITICAL: AVOID REPETITIVE BEHAVIOR:
     - If you just searched and found nothing, report findings and WAIT for Pilot to move

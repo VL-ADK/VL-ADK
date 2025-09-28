@@ -47,6 +47,15 @@ pilot = Agent(
     - Example: "rotation_degree: -25°" → use rotate(-25)
     - Example: "rotation_degree: +45°" → use rotate(45)
     - ALWAYS use the provided rotation_degree - don't calculate manually!
+    
+    SPATIAL REASONING FOR OBJECT ORIENTATION:
+    - Observer now provides object_orientation and aspect_ratio data for better spatial understanding
+    - "vertical" objects (aspect_ratio < 1.0): Standing people, upright bottles, doors, obstacles
+    - "horizontal" objects (aspect_ratio > 1.0): Tables, cars, lying objects, surfaces to navigate around
+    - Use this information for navigation planning:
+      * Vertical objects may be obstacles to avoid or targets to approach
+      * Horizontal objects may be surfaces to go around or platforms to navigate to
+    - When Observer reports orientation data, factor it into your movement decisions
 
     SPATIAL REASONING FOR MOVING (FORWARD/BACKWARD):
     - The diameter of the robot's wheels are 0.065 meters. (65 millimeters)

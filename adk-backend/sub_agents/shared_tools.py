@@ -53,17 +53,26 @@ mission_complete = FunctionTool(func=mission_complete_tool)
 # ----------------------------
 # Vision: Primary tool (YOLO-E)
 # ----------------------------
-def view_query_tool(query: list[str]) -> dict:
-    """Tool to view/search for a list of objects from the JetBot camera feed.
+def view_query_tool(query: list[str], orientation: Optional[str]) -> dict:
+    """Tool to view/search for a list of objects from the JetBot camera feed with optional orientation filtering.
 
     Args:
         query (list[str]): A list of objects to search for. Each query can be 1-3 words, and you can optionally add color queries.
         e.g. ["apple", "banana", "orange"]
         e.g. ["red apple", "green apple", "yellow apple"]
+        
+        orientation (Optional[str]): Filter by object orientation for spatial reasoning:
+        - "horizontal": Objects wider than tall (aspect_ratio > 1.0) - tables, cars, laptops, lying objects
+        - "vertical": Objects taller than wide (aspect_ratio < 1.0) - people, bottles, doors, standing objects
+        - None: No orientation filtering, returns all detected objects
 
-    Note:
-        - The "rotation_degree" field is the degree of rotation from the center of the image. Using it may be useful to turn head on towards the object.
-        - The bbox and area values are useful for determining distance. A larger bbox and area means the object is likely closer to the view, depending on the object.
+    Spatial Reasoning Notes:
+        - Use "horizontal" to find: tables, cars, laptops, books lying flat, horizontal surfaces
+        - Use "vertical" to find: people standing, bottles upright, doors, trees, vertical objects
+        - The "rotation_degree" field is the degree of rotation from the center of the image for navigation
+        - The bbox and area values determine distance - larger bbox/area means closer to camera
+        - The "object_orientation" field shows calculated orientation: "horizontal" or "vertical"
+        - The "aspect_ratio" field shows width/height ratio for precise spatial understanding
 
     Returns:
         dict: The response from the view_query API with the following fields:
@@ -72,16 +81,20 @@ def view_query_tool(query: list[str]) -> dict:
                 {
                     "class": "query",
                     "confidence": float,
-                    "bbox": [x, y, w, h],
+                    "bbox": [x1, y1, x2, y2],
                     "center": [x, y],
                     "area": float,
                     "prompt_index": int,
-                    "rotation_degree": float
+                    "rotation_degree": float,
+                    "object_orientation": "horizontal" | "vertical",
+                    "aspect_ratio": float
                 }
             ],
             "count": 1,
+            "total_detected": int,
+            "orientation_filter": str | None,
             "timestamp": float,
-            "image_shape": [w, h, 3],
+            "image_shape": [h, w, 3],
             "current_prompts": list[str],
             "model_type": "YOLO-E",
             "motor_data": {
@@ -94,10 +107,13 @@ def view_query_tool(query: list[str]) -> dict:
 
     """
 
-    print(f"[ADK-API] Viewing query: {query}")
+    print(f"[ADK-API] Viewing query: {query}" + (f" with orientation: {orientation}" if orientation else ""))
     url = "http://localhost:8001/yolo/"
     # The YOLO-E API expects a GET request with repeated 'words' query params.
     params = [("words", word) for word in query]
+    if orientation:
+        params.append(("orientation", orientation))
+    
     response = requests.get(url, params=params)
     resp_json = response.json()
 
@@ -109,7 +125,13 @@ def view_query_tool(query: list[str]) -> dict:
 
     print("[ADK-API] Found the following objects:")
     for annotation in resp_json["annotations"]:
-        print(f"  - {annotation['class']} (confidence: {annotation['confidence']})")
+        orientation_info = f" ({annotation.get('object_orientation', 'unknown')} - {annotation.get('aspect_ratio', 0):.2f})" if annotation.get('object_orientation') else ""
+        print(f"  - {annotation['class']} (confidence: {annotation['confidence']:.2f}){orientation_info}")
+
+    if orientation:
+        total = resp_json.get('total_detected', len(resp_json['annotations']))
+        filtered = len(resp_json['annotations'])
+        print(f"[ADK-API] Orientation filter '{orientation}': {filtered}/{total} objects match")
 
     return resp_json
 
@@ -449,20 +471,34 @@ def stop_robot_tool() -> dict:
 stop_robot = FunctionTool(func=stop_robot_tool)
 
 
-def scan_environment_tool(query: list[str]) -> dict:
-    """Tool to view/search for a list of objects from the JetBot camera feed.
+def scan_environment_tool(query: list[str], orientation: Optional[str]) -> dict:
+    """Tool to scan environment for objects with optional orientation filtering for spatial reasoning.
 
     Args:
         query (list[str]): A list of objects to search for. Each query can be 1-3 words, and you can optionally add color queries.
         e.g. ["apple", "banana", "orange"]
         e.g. ["red apple", "green apple", "yellow apple"]
+        
+        orientation (Optional[str]): Filter by object orientation for spatial reasoning:
+        - "horizontal": Find objects wider than tall (tables, cars, laptops, lying objects)
+        - "vertical": Find objects taller than wide (people, bottles, doors, standing objects)
+        - None: No orientation filtering, returns all detected objects
+
+    Spatial Reasoning:
+        - Horizontal objects often represent: surfaces (tables), vehicles (cars), devices (laptops)
+        - Vertical objects often represent: obstacles (people), containers (bottles), passages (doors)
+        - Use orientation filtering to distinguish between similar objects in different positions
+        - Example: "bottle" with "vertical" = upright bottle, "horizontal" = fallen/lying bottle
 
     Returns:
-        data from the scan_environment API, detailing what items were found in which quadrant.
+        dict: The response from the scan_environment API with spatial orientation data:
+        - Each annotation includes "object_orientation" and "aspect_ratio" fields
+        - "total_detected" shows objects found before orientation filtering
+        - "count" shows objects remaining after orientation filtering
 
     """
 
-    print(f"[ADK-API] Scanning environment for: {query}")
+    print(f"[ADK-API] Scanning environment for: {query}" + (f" with orientation: {orientation}" if orientation else ""))
 
     # First, set the prompts in the YOLO model so it can detect these objects
     print(f"[ADK-API] Setting YOLO prompts to: {query}")
@@ -474,13 +510,22 @@ def scan_environment_tool(query: list[str]) -> dict:
     except Exception as e:
         print(f"[ADK-API] Warning: Failed to set YOLO prompts: {e}")
 
-    # Now call the JetBot scan endpoint
+    # Now call the JetBot scan endpoint with orientation filtering
     url = f"{_ROBOT_BASE}/scan/"
     # Use query params like view_query does
     params = [("words", word) for word in query]
+    if orientation:
+        params.append(("orientation", orientation))
+        
     response = requests.post(url, params=params)
     try:
-        return response.json()
+        result = response.json()
+        
+        # Add spatial reasoning info to the response
+        if orientation and "annotations" in result:
+            print(f"[ADK-API] Spatial filter '{orientation}': Found {len(result.get('annotations', []))} {orientation} objects")
+            
+        return result
     except requests.exceptions.JSONDecodeError:
         return {
             "status": "scanning",
