@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ControlMessage, controlWsURL } from "../websocket";
+import { EraserIcon, RefreshCwIcon, SendIcon } from "lucide-react";
 
 type PromptSet = string[];
 type ApiState = "idle" | "loading" | "ok" | "error";
@@ -66,6 +67,25 @@ export function ManualControls({
     const [prompts, setPrompts] = useState<PromptSet>([]);
     const [newPrompt, setNewPrompt] = useState("");
 
+    const refreshYOLO = async () => {
+        try {
+            setPromptStatus("loading");
+            const res = await fetch(
+                `${YOLO_BASE}/prompts/`
+            );
+            if (res.ok) {
+                const data = await res.json();
+                if (
+                    Array.isArray(data?.current_prompts)
+                )
+                    setPrompts(data.current_prompts);
+            }
+            setPromptStatus("ok");
+        } catch {
+            setPromptStatus("error");
+        }
+    }
+
     useEffect(() => {
         setPrompts(currentPrompts ?? []);
     }, [currentPrompts]);
@@ -100,6 +120,8 @@ export function ManualControls({
         };
 
         connectControlWS();
+
+        refreshYOLO();
 
         return () => {
             if (controlWsRef.current) {
@@ -441,57 +463,42 @@ export function ManualControls({
         }[st]);
 
     return (
-        <div className="h-full flex flex-col border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-2 text-xs text-gray-100 min-h-0">
+        <div className="h-full flex flex-col min-h-0">
             {/* scrollable content */}
-            <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0">
+            <div className="grid grid-rows-3 gap-1 overflow-y-auto pr-1 h-full">
                 {/* Robot Controls - Takes more space */}
-                <div className="flex-1 border-2 border-[#27303e] rounded-md bg-[#1f2630] p-2 flex flex-col min-h-0">
+                <div className="row-span-2 flex-1 border-2 border-[#27303e] shadow-md rounded-md bg-[#171717] p-2 flex flex-col min-h-0">
                     <div className="flex items-center justify-between mb-2">
-                        <div className="font-bold text-green-300">
-                            Robot Controls
-                            {keysPressed.size > 0 && (
-                                <span className="ml-2 text-xs text-yellow-400 animate-pulse">
-                                    KEYBOARD ACTIVE
-                                </span>
-                            )}
-                        </div>
+                        KEYBOARD CONTROLS
                         <div className="flex items-center gap-2">
-                            <div className="text-xs text-gray-300">
-                                WS: {wsConnected ? "✓" : "✗"}
-                            </div>
                             <div
                                 className={`w-2 h-2 rounded-full ${badge(
                                     robotStatus
                                 )}`}
                             />
+                            <div className="text-xs text-gray-300">
+                                {robotStatus.toUpperCase()}
+                            </div>
                         </div>
                     </div>
 
                     {/* Keyboard controls help */}
-                    <div className="mb-3 p-2 bg-gray-800 rounded text-[10px] text-gray-300">
-                        <div className="font-semibold mb-1">
-                            Keyboard Controls:
+                    <div className="mb-3 rounded text-[10px] text-gray-300">
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                            <div className={`text-gray-400 border-b-2 border-gray-900 ${keysPressed.has("ArrowUp") || keysPressed.has("w") ? "bg-gray-900" : "bg-gray-800"} rounded-md p-1`}>[↑/W] Forward</div>
+                            <div className={`text-gray-400 border-b-2 border-gray-900 ${keysPressed.has("ArrowDown") || keysPressed.has("s") ? "bg-gray-900" : "bg-gray-800"} rounded-md p-1`}>[↓/S] Backward</div>
+                            <div className={`text-gray-400 border-b-2 border-gray-900 ${keysPressed.has("ArrowLeft") || keysPressed.has("a") ? "bg-gray-900" : "bg-gray-800"} rounded-md p-1`}>[←/A] Turn Left</div>
+                            <div className={`text-gray-400 border-b-2 border-gray-900 ${keysPressed.has("ArrowRight") || keysPressed.has("d") ? "bg-gray-900" : "bg-gray-800"} rounded-md p-1`}>[→/D] Turn Right</div>
+                            <div className={`text-gray-400 border-b-2 border-gray-900 ${keysPressed.has(" ") ? "bg-gray-900" : "bg-gray-800"}  rounded-md p-1`}>[SPACE] Emergency Stop</div>
+                            <div className={`text-gray-400 border-b-2 border-gray-900 ${keysPressed.has("Escape") ? "bg-gray-900" : "bg-gray-800"} rounded-md p-1`}>[ESC] Emergency Stop</div>
                         </div>
-                        <div className="grid grid-cols-2 gap-1 text-[9px]">
-                            <div>↑/W: Forward</div>
-                            <div>↓/S: Backward</div>
-                            <div>←/A: Turn Left</div>
-                            <div>→/D: Turn Right</div>
-                            <div>SPACE: Emergency Stop</div>
-                            <div>ESC: Emergency Stop</div>
-                        </div>
-                        {keysPressed.size > 0 && (
-                            <div className="mt-2 text-yellow-400">
-                                Active: {Array.from(keysPressed).join(", ")}
-                            </div>
-                        )}
                     </div>
 
                     {/* speed & duration */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="flex flex-row w-full gap-4 mb-4">
                         <div className="flex flex-col">
                             <label className="text-gray-400 mb-2 text-sm">
-                                Linear Speed
+                                LINEAR SPEED <span className="text-xs text-gray-400">(FORWARD/BACKWARD)</span>
                             </label>
                             <div className="flex items-center gap-3">
                                 <input
@@ -509,46 +516,14 @@ export function ManualControls({
                                     {speed.toFixed(2)}
                                 </span>
                             </div>
-                            <div className="text-[10px] text-gray-400 mt-2">
-                                Forward/Backward
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-gray-400 mb-2 text-sm">
-                                Duration (s)
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    placeholder="blank = continuous"
-                                    value={duration}
-                                    onChange={(e) =>
-                                        setDuration(
-                                            e.target.value === ""
-                                                ? ""
-                                                : Number(e.target.value)
-                                        )
-                                    }
-                                    className="w-full bg-[#111418] border border-[#2b3442] rounded px-3 py-2 text-sm"
-                                />
-                                <button
-                                    className="px-3 py-2 bg-gray-700 hover:bg-gray-800 rounded text-sm"
-                                    onClick={() => setDuration("")}
-                                >
-                                    ∞
-                                </button>
-                            </div>
                         </div>
                     </div>
 
                     {/* angular speed & degrees */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="flex flex-row w-full gap-4 mb-4">
                         <div className="flex flex-col">
                             <label className="text-gray-400 mb-2 text-sm">
-                                Angular Speed
+                                ANGULAR SPEED <span className="text-xs text-gray-400">(TURNING)</span>
                             </label>
                             <div className="flex items-center gap-3">
                                 <input
@@ -568,39 +543,11 @@ export function ManualControls({
                                     {angularVelocity.toFixed(2)}
                                 </span>
                             </div>
-                            <div className="text-[10px] text-gray-400 mt-2">
-                                Turn Left/Right
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-gray-400 mb-2 text-sm">
-                                Degrees
-                            </label>
-                            <input
-                                type="number"
-                                step="1"
-                                min="1"
-                                max="360"
-                                value={degrees}
-                                onChange={(e) =>
-                                    setDegrees(
-                                        e.target.value === ""
-                                            ? ""
-                                            : Number(e.target.value)
-                                    )
-                                }
-                                className="w-full bg-[#111418] border border-[#2b3442] rounded px-3 py-2 text-sm"
-                                placeholder="45"
-                            />
-                            <div className="text-[10px] text-gray-400 mt-2">
-                                Rotation amount
-                            </div>
                         </div>
                     </div>
 
                     {/* D-Pad - Takes more space */}
-                    <div className="flex-1 flex flex-col justify-center">
+                    <div className="flex-1 flex flex-col justify-center hidden">
                         <div className="grid grid-cols-3 gap-3">
                             <div />
                             <button
@@ -645,7 +592,7 @@ export function ManualControls({
                     </div>
 
                     {/* custom rotation + scan */}
-                    <div className="mt-4 flex items-center justify-between">
+                    <div className="mt-4 flex items-center justify-between hidden">
                         <div className="flex items-center gap-2">
                             <button
                                 className="px-3 py-2 bg-blue-700 hover:bg-blue-800 rounded text-sm"
@@ -672,49 +619,57 @@ export function ManualControls({
                 </div>
 
                 {/* Prompt Controls */}
-                <div className="border-2 border-[#27303e] rounded-md bg-[#1f2630] p-2">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="font-bold text-green-300">
-                            YOLO Prompts
+                <div className="border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-2 flex flex-col justify-between">
+                    <div className="flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="text-xs">
+                                YOLO PROMPTS
+                            </div>
+                            <div className="flex flex-row gap-2">
+                                <div
+                                    className={`w-2 h-2 my-auto rounded-full ${
+                                        {
+                                            idle: "bg-gray-600",
+                                            loading: "bg-yellow-600 animate-pulse",
+                                            ok: "bg-green-600",
+                                            error: "bg-red-600",
+                                        }[promptStatus]
+                                    }`}
+                                />
+                                <div className="text-xs my-auto">{promptStatus.toUpperCase()}</div>
+                            </div>
+                            
                         </div>
-                        <div
-                            className={`w-2 h-2 rounded-full ${
-                                {
-                                    idle: "bg-gray-600",
-                                    loading: "bg-yellow-600 animate-pulse",
-                                    ok: "bg-green-600",
-                                    error: "bg-red-600",
-                                }[promptStatus]
-                            }`}
-                        />
-                    </div>
-
-                    {/* Chips */}
-                    <div className="flex flex-wrap gap-2">
-                        {prompts.length === 0 && (
-                            <span className="text-gray-400 text-[11px]">
-                                No prompts set
-                            </span>
-                        )}
-                        {prompts.map((p, i) => (
-                            <span
-                                key={`${p}-${i}`}
-                                className="inline-flex items-center gap-1 bg-[#2a3442] border border-[#334155] rounded px-2 py-1"
-                            >
-                                <span>{p}</span>
-                                <button
-                                    className="text-red-300 hover:text-red-500"
-                                    onClick={() => removePrompt(i)}
-                                    title="Remove prompt"
+                    
+                    
+                        {/* Chips */}
+                        <div className="flex flex-wrap gap-2">
+                            {prompts.length === 0 && (
+                                <span className="text-gray-400 text-[11px]">
+                                    No prompts set
+                                </span>
+                            )}
+                            {prompts.map((p, i) => (
+                                <span
+                                    key={`${p}-${i}`}
+                                    className="inline-flex text-xs items-center gap-1 bg-[#2a3442] border border-[#334155] rounded px-2 py-1"
                                 >
-                                    ✕
-                                </button>
-                            </span>
-                        ))}
+                                    <span>{p}</span>
+                                    <button
+                                        className="text-red-300 hover:text-red-500"
+                                        onClick={() => removePrompt(i)}
+                                        title="Remove prompt"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+
                     </div>
 
                     {/* Add */}
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex gap-2 text-xs">
                         <input
                             type="text"
                             className="flex-1 bg-[#111418] border border-[#2b3442] rounded px-2 py-1"
@@ -726,43 +681,27 @@ export function ManualControls({
                             }}
                         />
                         <button
-                            className="px-2 py-1 bg-green-700 hover:bg-green-800 rounded"
+                            className="p-1 cursor-pointer border border-[#ededed] rounded"
                             onClick={addPromptFromInput}
                         >
-                            Add
+                            <SendIcon className="w-4 h-4" />
                         </button>
                         <button
-                            className="px-2 py-1 bg-amber-700 hover:bg-amber-800 rounded"
+                            className="p-1 cursor-pointer border border-[#ededed] rounded"
                             onClick={() => setPromptList([])}
                             title="Clear all prompts"
                         >
-                            Clear
+                            <EraserIcon className="w-4 h-4" />
                         </button>
                         <button
-                            className="ml-auto px-2 py-1 bg-sky-700 hover:bg-sky-800 rounded"
-                            onClick={async () => {
-                                try {
-                                    setPromptStatus("loading");
-                                    const res = await fetch(
-                                        `${YOLO_BASE}/prompts/`
-                                    );
-                                    if (res.ok) {
-                                        const data = await res.json();
-                                        if (
-                                            Array.isArray(data?.current_prompts)
-                                        )
-                                            setPrompts(data.current_prompts);
-                                    }
-                                    setPromptStatus("ok");
-                                } catch {
-                                    setPromptStatus("error");
-                                }
-                            }}
+                            className="ml-auto p-1 cursor-pointer border border-[#ededed] rounded"
+                            onClick={refreshYOLO}
                             title="Refresh from backend"
                         >
-                            Refresh
+                            <RefreshCwIcon className="w-4 h-4" />
                         </button>
                     </div>
+                    
                 </div>
             </div>
         </div>

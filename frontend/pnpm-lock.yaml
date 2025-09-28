@@ -54,6 +54,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.1.9(@types/react@19.1.14)
+      '@types/react-speech-recognition':
+        specifier: ^3.9.6
+        version: 3.9.6
       eslint:
         specifier: ^9
         version: 9.36.0(jiti@2.6.0)
@@ -517,6 +520,9 @@ packages:
   '@types/d3-timer@3.0.2':
     resolution: {integrity: sha512-Ps3T8E8dZDam6fUyNiMkekK3XUsaUEik+idO9/YjPtfj2qruF8tFBXS7XhtE4iIXBLxhmLjP3SXpLhVf21I9Lw==}
 
+  '@types/dom-speech-recognition@0.0.6':
+    resolution: {integrity: sha512-o7pAVq9UQPJL5RDjO1f/fcpfFHdgiMnR4PoIU2N/ZQrYOS3C5rzdOJMsrpqeBCbii2EE9mERXgqspQqPDdPahw==}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -533,6 +539,9 @@ packages:
     resolution: {integrity: sha512-qXRuZaOsAdXKFyOhRBg6Lqqc0yay13vN7KrIg4L7N4aaHN68ma9OK3NE1BoDFgFOTfM7zg+3/8+2n8rLUH3OKQ==}
     peerDependencies:
       '@types/react': ^19.0.0
+
+  '@types/react-speech-recognition@3.9.6':
+    resolution: {integrity: sha512-cdzwXIZXWyp8zfM2XI7APDW1rZf4Nz73T4SIS2y+cC7zHnZluCdumYKH6HacxgxJH+zemAq2oXbHWXcyW0eT3A==}
 
   '@types/react@19.1.14':
     resolution: {integrity: sha512-ukd93VGzaNPMAUPy0gRDSC57UuQbnH9Kussp7HBjM06YFi9uZTFhOvMSO2OKqXm1rSgzOE+pVx1k1PYHGwlc8Q==}
@@ -2478,6 +2487,8 @@ snapshots:
 
   '@types/d3-timer@3.0.2': {}
 
+  '@types/dom-speech-recognition@0.0.6': {}
+
   '@types/estree@1.0.8': {}
 
   '@types/json-schema@7.0.15': {}
@@ -2491,6 +2502,10 @@ snapshots:
   '@types/react-dom@19.1.9(@types/react@19.1.14)':
     dependencies:
       '@types/react': 19.1.14
+
+  '@types/react-speech-recognition@3.9.6':
+    dependencies:
+      '@types/dom-speech-recognition': 0.0.6
 
   '@types/react@19.1.14':
     dependencies:

@@ -7,12 +7,13 @@ import Motor from "./components/motor";
 import { Radar } from "./components/radar";
 import { VideoStream } from "./components/videostream";
 import { eStop, SessionToken, startSession } from "./endpoints";
-import { annotationWsURL, ControlSchema, MotorData } from "./websocket";
+import { annotationWsURL, ControlSchema, MotorData, UsefulAnnotationObject } from "./websocket";
 
 export default function Home() {
     const annotationWs = useRef<WebSocket | null>(null);
     const [image, setImage] = useState<string | undefined>("");
     const [motorData, setMotorData] = useState<MotorData | null>(null);
+    const [radarData, setRadarData] = useState<UsefulAnnotationObject[] | null>(null);
     const [control, setControl] = useState<ControlSchema | null>(null);
     const [session, setSession] = useState<SessionToken | null>(null);
     const [currentPrompts, setCurrentPrompts] = useState<string[]>([]);
@@ -33,6 +34,7 @@ export default function Home() {
             annotationWs.current.onmessage = (event) => {
                 const body: any = JSON.parse(event.data);
                 if (body.image) setImage(body.image);
+                if (body.annotations && body.annotations.length > 0) setRadarData(body.annotations)
                 if (body.motor_data) {
                     setMotorData({
                         left_motor: body.motor_data.left_motor || 0,
@@ -123,7 +125,7 @@ export default function Home() {
                 {/* Left: Controls */}
                 <div className="col-span-3 flex flex-col gap-1 min-h-0">
                     <div className="text-xs p-1 px-2 border-2 border-green-900 bg-green-900 rounded-sm w-fit">
-                        CONTROLS
+                        MANUAL CONTROLS
                     </div>
                     {/* make the controls fill the remaining column height */}
                     <div className="flex-1 min-h-0">
@@ -179,7 +181,7 @@ export default function Home() {
 
                     <div className="flex-1 min-h-0">
                         {tab === AGENT_GRAPH && <AgentGraph />}
-                        {tab === RADAR && <Radar />}
+                        {tab === RADAR && <Radar data={radarData ?? []}/>}
                         {tab === MOTOR_DATA && (
                             <Motor motorData={motorData} control={control} />
                         )}

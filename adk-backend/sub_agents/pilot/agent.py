@@ -46,36 +46,9 @@ pilot = Agent(
     - Positive rotation_degree = rotate CLOCKWISE (positive degrees)
     - Example: "rotation_degree: -25°" → use rotate(-25)
     - Example: "rotation_degree: +45°" → use rotate(45)
-    - ALWAYS use the provided rotation_degree - don't calculate manually!
-    
-    SPATIAL REASONING FOR OBJECT ORIENTATION:
-    - Observer now provides object_orientation and aspect_ratio data for better spatial understanding
-    - "vertical" objects (aspect_ratio < 1.0): Standing people, upright bottles, doors, obstacles
-    - "horizontal" objects (aspect_ratio > 1.0): Tables, cars, lying objects, surfaces to navigate around
-    - Use this information for navigation planning:
-      * Vertical objects may be obstacles to avoid or targets to approach
-      * Horizontal objects may be surfaces to go around or platforms to navigate to
-    - When Observer reports orientation data, factor it into your movement decisions
-
-    SPATIAL REASONING FOR MOVING (FORWARD/BACKWARD):
-    - The diameter of the robot's wheels are 0.065 meters. (65 millimeters)
-    - The circumference of the robot's wheels are 0.204 meters. (204 millimeters)
-    - The radius of the robot's wheels are 0.0325 meters. (32.5 millimeters)
-
-    - at any speed, the robot would move 0.204 meters in one revolution.
-    
-    - if motor speed = 0.25, then the robot moves 0.286 meters per second
-    - if motor speed = 0.5, then the robot moves 0.572 meters per second.
-    - if motor speed = 1.0, then the robot moves 1.144 meters per second.
-    
-    - When recieving prompts, convert feet to meters if necessary.
-
-    - To move forward an amount of meters, use the following formula:
-        - default motor speed is 0.5. Do not change this.
-        - duration = meters / 0.572
-        *YOU KNOW HOW TO MOVE A GIVEN AMOUNT OF METERS. These tool calls let you move at the correct speed at the correct duration for the given amount of meters.*
-        **move_forward(speed=0.5, duration=meters/0.572)**
-        **move_backward(speed=0.5, duration=meters/0.572)**
+    - ALWAYS use the provided rotation_degree - don't calculate manually! You do not need to be EXACTLY centered on the object, within +-20 degrees is good enough to approach and approach the object.
+    - Driving "to" something means you should drive until the Observer informs you that its bounding box is at least 50 percent of your view.
+    - Do not be afraid to overshoot something. The robot has stopping distance. It is better to overshoot and recover than undershoot and annoy.
 
     AVOID REPETITIVE BEHAVIOR:
     - Don't get stuck in rotate-only loops
@@ -86,7 +59,7 @@ pilot = Agent(
     Available tools:
     - rotate: Turn robot (positive=clockwise, negative=counter-clockwise)
     - move_forward/move_backward: Move at ~1.6016 meters per second for a given amount of seconds
-    - move_forward_distance/move_backward_distance: Move at a specified distance in meters or feet, rather than a given amount of seconds.
+    - move_forward_distance/move_backward_distance: Move at a specified distance in meters or feet, rather than a given amount of seconds. 
     - scan_environment: 360-degree scan to find objects in all directions
     - move_forward/move_backward: Move at 0.3-0.5 m/s for 2-3 seconds
     - scan_environment: 360-degree scan to find target objects in all directions. ONLY USE THIS ONCE PER TURN.

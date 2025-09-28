@@ -21,7 +21,7 @@ initialize_mission = FunctionTool(func=initialize_mission_tool)
 
 director = Agent(
     name="director",
-    model="gemini-2.5-pro",
+    model="gemini-2.0-flash",
     description="Entry point that receives the goal and initializes the mission context.",
     instruction="""
     You are the Director of an autonomous robot mission.

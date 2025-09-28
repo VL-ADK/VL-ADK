@@ -10,7 +10,7 @@ export default function Motor({
     return (
         <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-2 text-xs flex flex-col relative">
             {/* Status bar at top */}
-            <div className="mb-2 p-1 bg-gray-800 rounded text-center">
+            <div className="mb-2 p-1 border-gray-800 bg-gray-800/25 px-2 border-b-2 rounded-md text-left">
                 {control
                     ? `${control?.status.toUpperCase()} at ${
                           control?.speed
@@ -21,8 +21,8 @@ export default function Motor({
             {/* Motor data display - takes remaining space */}
             <div className="flex-1 grid grid-cols-2 gap-4">
                 <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="font-bold text-green-300">Left Motor</div>
-                    <div className="text-2xl font-mono bg-gray-800 rounded-sm p-3 w-full text-center">
+                    <div className="font-bold">Left Motor</div>
+                    <div className="text-2xl border-gray-800 bg-gray-800/25 text-gray-400 px-2 border-b-2 rounded-md">
                         {Intl.NumberFormat("en-US", {
                             minimumSignificantDigits: 4,
                             maximumSignificantDigits: 4,
@@ -30,8 +30,8 @@ export default function Motor({
                     </div>
                 </div>
                 <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="font-bold text-green-300">Right Motor</div>
-                    <div className="text-2xl font-mono bg-gray-800 rounded-sm p-3 w-full text-center">
+                    <div className="font-bold">Right Motor</div>
+                    <div className="text-2xl border-gray-800 bg-gray-800/25 text-gray-400 px-2 border-b-2 rounded-md">
                         {Intl.NumberFormat("en-US", {
                             minimumSignificantDigits: 4,
                             maximumSignificantDigits: 4,
