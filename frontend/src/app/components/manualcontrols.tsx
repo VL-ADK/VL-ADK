@@ -55,8 +55,6 @@ export function ManualControls({
 
     // --- keyboard control state ---
     const [keysPressed, setKeysPressed] = useState<Set<string>>(new Set());
-    const [isApiCallInProgress, setIsApiCallInProgress] = useState(false);
-    const keyboardIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // --- WebSocket control ---
     const controlWsRef = useRef<WebSocket | null>(null);
@@ -177,7 +175,6 @@ export function ManualControls({
                     sendControlMessage({
                         action: "forward",
                         linear_velocity: speed,
-                        duration: 0.8,
                     })
                 ) {
                     setRobotStatus("ok");
@@ -194,7 +191,6 @@ export function ManualControls({
                     sendControlMessage({
                         action: "backward",
                         linear_velocity: speed,
-                        duration: 0.8,
                     })
                 ) {
                     setRobotStatus("ok");
@@ -211,7 +207,6 @@ export function ManualControls({
                     sendControlMessage({
                         action: "left",
                         angular_velocity: speed,
-                        duration: 0.8,
                     })
                 ) {
                     setRobotStatus("ok");
@@ -228,7 +223,6 @@ export function ManualControls({
                     sendControlMessage({
                         action: "right",
                         angular_velocity: speed,
-                        duration: 0.8,
                     })
                 ) {
                     setRobotStatus("ok");
@@ -308,32 +302,16 @@ export function ManualControls({
         };
     }, []);
 
-    // Process keyboard movement continuously
+    // Process keyboard movement - immediate start/stop, no intervals
     useEffect(() => {
         if (keysPressed.size > 0 && wsConnected) {
-            // Start immediately on key press
+            // Start movement immediately when key is pressed
             processKeyboardMovement();
-            // Then continue with faster intervals for WebSocket - 400ms to work with 0.8s duration
-            keyboardIntervalRef.current = setInterval(
-                processKeyboardMovement,
-                400
-            ); // ~2.5Hz update rate - faster than HTTP since WebSocket has lower latency
-        } else {
-            // Clear the interval when no keys are pressed or WS disconnected
-            if (keyboardIntervalRef.current) {
-                clearInterval(keyboardIntervalRef.current);
-                keyboardIntervalRef.current = null;
-            }
+        } else if (keysPressed.size === 0 && wsConnected) {
+            // Stop immediately when all keys are released
+            sendControlMessage({ action: "stop" });
         }
-
-        // Cleanup on unmount
-        return () => {
-            if (keyboardIntervalRef.current) {
-                clearInterval(keyboardIntervalRef.current);
-                keyboardIntervalRef.current = null;
-            }
-        };
-    }, [keysPressed, wsConnected, processKeyboardMovement]);
+    }, [keysPressed, wsConnected, processKeyboardMovement, sendControlMessage]);
 
     // -------- robot actions --------
     async function doForward() {
@@ -364,42 +342,7 @@ export function ManualControls({
         }
     }
 
-    // Keyboard-specific continuous movement (with duration for continuous hold)
-    async function doKeyboardForward() {
-        if (isApiCallInProgress) return;
-        try {
-            setIsApiCallInProgress(true);
-            setRobotStatus("loading");
-            await postQuery(`${ROBOT_BASE}/forward/`, {
-                speed,
-                duration: 0.8, // Longer duration for smoother movement
-            });
-            setRobotStatus("ok");
-        } catch (e) {
-            console.error(e);
-            setRobotStatus("error");
-        } finally {
-            setIsApiCallInProgress(false);
-        }
-    }
-
-    async function doKeyboardBackward() {
-        if (isApiCallInProgress) return;
-        try {
-            setIsApiCallInProgress(true);
-            setRobotStatus("loading");
-            await postQuery(`${ROBOT_BASE}/backward/`, {
-                speed,
-                duration: 0.8, // Longer duration for smoother movement
-            });
-            setRobotStatus("ok");
-        } catch (e) {
-            console.error(e);
-            setRobotStatus("error");
-        } finally {
-            setIsApiCallInProgress(false);
-        }
-    }
+    // Note: Keyboard movement now uses WebSocket via processKeyboardMovement function
 
     async function doRotate(delta: number) {
         try {
@@ -412,23 +355,7 @@ export function ManualControls({
         }
     }
 
-    async function doKeyboardRotate(delta: number) {
-        if (isApiCallInProgress) return;
-        try {
-            setIsApiCallInProgress(true);
-            setRobotStatus("loading");
-            await postQuery(`${ROBOT_BASE}/rotate/`, {
-                angle: delta,
-                // Rotation doesn't need duration - it's an instant command
-            });
-            setRobotStatus("ok");
-        } catch (e) {
-            console.error(e);
-            setRobotStatus("error");
-        } finally {
-            setIsApiCallInProgress(false);
-        }
-    }
+    // Note: Keyboard rotation now uses WebSocket via processKeyboardMovement function
 
     async function doRotateCustom() {
         if (angle === "" || Number.isNaN(Number(angle))) return;

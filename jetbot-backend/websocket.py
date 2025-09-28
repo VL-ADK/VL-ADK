@@ -79,44 +79,34 @@ class WebSocketServer:
             # Extract speed parameters - allow both 'speed' and 'linear_velocity'
             linear_velocity = data.get("speed", data.get("linear_velocity", 0.3))
             angular_velocity = data.get("angular_velocity", linear_velocity)  # Use linear as fallback
-            duration = data.get("duration", 0.5)
 
             if action == "forward":
-                print(f"WebSocket control: forward linear_velocity={linear_velocity} duration={duration}")
-                self.robot.forward(linear_velocity)
-                if duration > 0:
-                    asyncio.create_task(self._stop_after_delay(duration))
+                print(f"WebSocket control: forward linear_velocity={linear_velocity} (direct motor control)")
+                self.robot.left_motor.value = linear_velocity
+                self.robot.right_motor.value = linear_velocity
 
             elif action == "backward":
-                print(f"WebSocket control: backward linear_velocity={linear_velocity} duration={duration}")
-                self.robot.backward(linear_velocity)
-                if duration > 0:
-                    asyncio.create_task(self._stop_after_delay(duration))
+                print(f"WebSocket control: backward linear_velocity={linear_velocity} (direct motor control)")
+                self.robot.left_motor.value = -linear_velocity
+                self.robot.right_motor.value = -linear_velocity
 
             elif action == "left":
-                print(f"WebSocket control: left angular_velocity={angular_velocity} duration={duration}")
-                self.robot.left(angular_velocity)
-                if duration > 0:
-                    asyncio.create_task(self._stop_after_delay(duration))
+                print(f"WebSocket control: left angular_velocity={angular_velocity} (direct motor control)")
+                self.robot.left_motor.value = -angular_velocity
+                self.robot.right_motor.value = angular_velocity
 
             elif action == "right":
-                print(f"WebSocket control: right angular_velocity={angular_velocity} duration={duration}")
-                self.robot.right(angular_velocity)
-                if duration > 0:
-                    asyncio.create_task(self._stop_after_delay(duration))
+                print(f"WebSocket control: right angular_velocity={angular_velocity} (direct motor control)")
+                self.robot.left_motor.value = angular_velocity
+                self.robot.right_motor.value = -angular_velocity
 
             elif action == "stop":
-                print("WebSocket control: stop")
-                self.robot.stop()
+                print("WebSocket control: stop (direct motor control)")
+                self.robot.left_motor.value = 0.0
+                self.robot.right_motor.value = 0.0
 
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Invalid control message: {e}")
-
-    async def _stop_after_delay(self, delay: float):
-        """Stop the robot after a specified delay."""
-        await asyncio.sleep(delay)
-        if self.robot:
-            self.robot.stop()
 
     # ---------- Public API ----------
 
