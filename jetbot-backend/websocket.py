@@ -4,10 +4,12 @@
 # - Sends JPEG frames + control data with backpressure (latest-only)
 
 import asyncio
-import json
 import base64
-import websockets
+import json
 from dataclasses import dataclass
+
+import websockets
+
 
 @dataclass
 class _Client:
@@ -17,12 +19,13 @@ class _Client:
 
 
 class WebSocketServer:
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, robot=None):
         self.host = host
         self.port = port
         self.server = None
         self.clients: list[_Client] = []
         self._lock = asyncio.Lock()
+        self.robot = robot  # JetBot robot instance for direct control
 
     async def start(self):
         self.server = await websockets.serve(self._handle_client, self.host, self.port)
@@ -36,8 +39,9 @@ class WebSocketServer:
 
         client.task = asyncio.create_task(self._client_sender(client))
         try:
-            async for _ in ws:
-                pass
+            async for message in ws:
+                # Handle incoming control messages
+                await self._handle_control_message(message)
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
@@ -63,21 +67,68 @@ class WebSocketServer:
             pass
         print(f"Client disconnected: {getattr(client.ws, 'remote_address', '?')}")
 
+    async def _handle_control_message(self, message):
+        """Handle incoming control messages from clients."""
+        if not self.robot:
+            return  # No robot available
+
+        try:
+            data = json.loads(message)
+            action = data.get("action")
+
+            # Extract speed parameters - allow both 'speed' and 'linear_velocity'
+            linear_velocity = data.get("speed", data.get("linear_velocity", 0.3))
+            angular_velocity = data.get("angular_velocity", linear_velocity)  # Use linear as fallback
+            duration = data.get("duration", 0.5)
+
+            if action == "forward":
+                print(f"WebSocket control: forward linear_velocity={linear_velocity} duration={duration}")
+                self.robot.forward(linear_velocity)
+                if duration > 0:
+                    asyncio.create_task(self._stop_after_delay(duration))
+
+            elif action == "backward":
+                print(f"WebSocket control: backward linear_velocity={linear_velocity} duration={duration}")
+                self.robot.backward(linear_velocity)
+                if duration > 0:
+                    asyncio.create_task(self._stop_after_delay(duration))
+
+            elif action == "left":
+                print(f"WebSocket control: left angular_velocity={angular_velocity} duration={duration}")
+                self.robot.left(angular_velocity)
+                if duration > 0:
+                    asyncio.create_task(self._stop_after_delay(duration))
+
+            elif action == "right":
+                print(f"WebSocket control: right angular_velocity={angular_velocity} duration={duration}")
+                self.robot.right(angular_velocity)
+                if duration > 0:
+                    asyncio.create_task(self._stop_after_delay(duration))
+
+            elif action == "stop":
+                print("WebSocket control: stop")
+                self.robot.stop()
+
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Invalid control message: {e}")
+
+    async def _stop_after_delay(self, delay: float):
+        """Stop the robot after a specified delay."""
+        await asyncio.sleep(delay)
+        if self.robot:
+            self.robot.stop()
+
     # ---------- Public API ----------
 
     async def broadcast_payload(self, jpeg_bytes: bytes, left_motor: float = 0.0, right_motor: float = 0.0, control=None):
         """Send image+control as JSON to all clients (latest-only)."""
         base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
-        payload = {
-            "image": base64_image,
-            "left_motor": left_motor,
-            "right_motor": right_motor
-        }
-        
+        payload = {"image": base64_image, "left_motor": left_motor, "right_motor": right_motor}
+
         # Add control message if provided
         if control is not None:
-            payload["control"] = control.dict() if hasattr(control, 'dict') else control
-            
+            payload["control"] = control.dict() if hasattr(control, "dict") else control
+
         msg = json.dumps(payload)
         async with self._lock:
             for client in list(self.clients):

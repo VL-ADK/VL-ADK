@@ -1,10 +1,19 @@
 export const wsURL = "ws://127.0.0.1:8890";
 export const annotationWsURL = "ws://127.0.0.1:8002";
+export const controlWsURL = "ws://127.0.0.1:8890"; // Same as wsURL for now
 
 export type ControlSchema = {
     status: string;
     speed: number;
     duration: number;
+};
+
+export type ControlMessage = {
+    action: "forward" | "backward" | "left" | "right" | "stop";
+    speed?: number;
+    linear_velocity?: number;
+    angular_velocity?: number;
+    duration?: number;
 };
 
 export type ImageMessage = {

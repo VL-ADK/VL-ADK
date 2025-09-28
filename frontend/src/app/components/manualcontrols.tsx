@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ControlMessage, controlWsURL } from "../websocket";
 
 type PromptSet = string[];
 type ApiState = "idle" | "loading" | "ok" | "error";
@@ -57,6 +58,10 @@ export function ManualControls({
     const [isApiCallInProgress, setIsApiCallInProgress] = useState(false);
     const keyboardIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    // --- WebSocket control ---
+    const controlWsRef = useRef<WebSocket | null>(null);
+    const [wsConnected, setWsConnected] = useState(false);
+
     // --- prompt state ---
     const [promptStatus, setPromptStatus] = useState<ApiState>("idle");
     const [prompts, setPrompts] = useState<PromptSet>([]);
@@ -65,6 +70,44 @@ export function ManualControls({
     useEffect(() => {
         setPrompts(currentPrompts ?? []);
     }, [currentPrompts]);
+
+    // Initialize WebSocket control connection
+    useEffect(() => {
+        const connectControlWS = () => {
+            try {
+                controlWsRef.current = new WebSocket(controlWsURL);
+
+                controlWsRef.current.onopen = () => {
+                    console.log("Connected to robot control WebSocket");
+                    setWsConnected(true);
+                };
+
+                controlWsRef.current.onclose = () => {
+                    console.log(
+                        "Robot control WebSocket disconnected, retrying in 3 seconds..."
+                    );
+                    setWsConnected(false);
+                    setTimeout(connectControlWS, 3000);
+                };
+
+                controlWsRef.current.onerror = (error) => {
+                    console.error("Control WebSocket error:", error);
+                    setWsConnected(false);
+                };
+            } catch (error) {
+                console.error("Failed to create control WebSocket:", error);
+                setTimeout(connectControlWS, 3000);
+            }
+        };
+
+        connectControlWS();
+
+        return () => {
+            if (controlWsRef.current) {
+                controlWsRef.current.close();
+            }
+        };
+    }, []);
 
     // Also fetch once on mount (in case WS is late)
     useEffect(() => {
@@ -82,27 +125,44 @@ export function ManualControls({
         })();
     }, []);
 
+    // -------- WebSocket control helper --------
+    const sendControlMessage = useCallback(
+        (message: ControlMessage) => {
+            if (controlWsRef.current && wsConnected) {
+                try {
+                    controlWsRef.current.send(JSON.stringify(message));
+                    console.log("Sent control message:", message);
+                    return true;
+                } catch (error) {
+                    console.error("Failed to send control message:", error);
+                    return false;
+                }
+            }
+            return false;
+        },
+        [wsConnected]
+    );
+
     // -------- keyboard control logic --------
-    const processKeyboardMovement = useCallback(async () => {
+    const processKeyboardMovement = useCallback(() => {
         if (keysPressed.size === 0) return;
 
-        // Skip if API call is in progress, but don't block the whole system
-        if (isApiCallInProgress) {
-            console.log("API call in progress, skipping...");
+        if (!wsConnected) {
+            console.log("WebSocket not connected, skipping control");
             return;
         }
 
         try {
+            setRobotStatus("loading");
+
             // Priority: Stop > Movement > Rotation
             if (keysPressed.has(" ") || keysPressed.has("Escape")) {
                 console.log("Emergency stop triggered");
-                setIsApiCallInProgress(true);
-                setRobotStatus("loading");
-                await fetch(`${ROBOT_BASE}/stop/`, {
-                    method: "POST",
-                    mode: "cors",
-                });
-                setRobotStatus("ok");
+                if (sendControlMessage({ action: "stop" })) {
+                    setRobotStatus("ok");
+                } else {
+                    setRobotStatus("error");
+                }
                 return;
             }
 
@@ -113,36 +173,74 @@ export function ManualControls({
                 keysPressed.has("W")
             ) {
                 console.log("Moving forward");
-                await doKeyboardForward();
+                if (
+                    sendControlMessage({
+                        action: "forward",
+                        linear_velocity: speed,
+                        duration: 0.8,
+                    })
+                ) {
+                    setRobotStatus("ok");
+                } else {
+                    setRobotStatus("error");
+                }
             } else if (
                 keysPressed.has("ArrowDown") ||
                 keysPressed.has("s") ||
                 keysPressed.has("S")
             ) {
                 console.log("Moving backward");
-                await doKeyboardBackward();
+                if (
+                    sendControlMessage({
+                        action: "backward",
+                        linear_velocity: speed,
+                        duration: 0.8,
+                    })
+                ) {
+                    setRobotStatus("ok");
+                } else {
+                    setRobotStatus("error");
+                }
             } else if (
                 keysPressed.has("ArrowLeft") ||
                 keysPressed.has("a") ||
                 keysPressed.has("A")
             ) {
                 console.log("Rotating left");
-                await doKeyboardRotate(-25); // 25 degrees left for smoother rotation
+                if (
+                    sendControlMessage({
+                        action: "left",
+                        angular_velocity: speed,
+                        duration: 0.8,
+                    })
+                ) {
+                    setRobotStatus("ok");
+                } else {
+                    setRobotStatus("error");
+                }
             } else if (
                 keysPressed.has("ArrowRight") ||
                 keysPressed.has("d") ||
                 keysPressed.has("D")
             ) {
                 console.log("Rotating right");
-                await doKeyboardRotate(25); // 25 degrees right for smoother rotation
+                if (
+                    sendControlMessage({
+                        action: "right",
+                        angular_velocity: speed,
+                        duration: 0.8,
+                    })
+                ) {
+                    setRobotStatus("ok");
+                } else {
+                    setRobotStatus("error");
+                }
             }
         } catch (error) {
             console.error("Keyboard movement error:", error);
             setRobotStatus("error");
-        } finally {
-            setIsApiCallInProgress(false);
         }
-    }, [keysPressed, isApiCallInProgress, speed]);
+    }, [keysPressed, wsConnected, speed, sendControlMessage]);
 
     // Keyboard event handlers
     useEffect(() => {
@@ -212,16 +310,16 @@ export function ManualControls({
 
     // Process keyboard movement continuously
     useEffect(() => {
-        if (keysPressed.size > 0) {
+        if (keysPressed.size > 0 && wsConnected) {
             // Start immediately on key press
             processKeyboardMovement();
-            // Then continue with intervals - 600ms to work with 0.8s duration commands
+            // Then continue with faster intervals for WebSocket - 400ms to work with 0.8s duration
             keyboardIntervalRef.current = setInterval(
                 processKeyboardMovement,
-                600
-            ); // ~1.7Hz update rate - allows commands to overlap slightly for smooth movement
+                400
+            ); // ~2.5Hz update rate - faster than HTTP since WebSocket has lower latency
         } else {
-            // Clear the interval when no keys are pressed
+            // Clear the interval when no keys are pressed or WS disconnected
             if (keyboardIntervalRef.current) {
                 clearInterval(keyboardIntervalRef.current);
                 keyboardIntervalRef.current = null;
@@ -235,7 +333,7 @@ export function ManualControls({
                 keyboardIntervalRef.current = null;
             }
         };
-    }, [keysPressed, processKeyboardMovement]);
+    }, [keysPressed, wsConnected, processKeyboardMovement]);
 
     // -------- robot actions --------
     async function doForward() {
@@ -427,11 +525,9 @@ export function ManualControls({
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            {isApiCallInProgress && (
-                                <div className="text-xs text-yellow-400 animate-pulse">
-                                    API
-                                </div>
-                            )}
+                            <div className="text-xs text-gray-300">
+                                WS: {wsConnected ? "✓" : "✗"}
+                            </div>
                             <div
                                 className={`w-2 h-2 rounded-full ${badge(
                                     robotStatus

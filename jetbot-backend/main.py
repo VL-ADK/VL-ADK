@@ -6,20 +6,21 @@
 # - Streams JPEG frames + control data to web clients
 
 import asyncio
+
 import cv2
+from api import Api
 from jetbot import Camera, Robot
 from websocket import WebSocketServer
-from api import Api
 
 # Constants
 WEBSOCKET_HOST = "127.0.0.1"
 WEBSOCKET_PORT = 8890
 API_HOST = "127.0.0.1"
 API_PORT = 8889
-IMAGE_WIDTH = 1640      
+IMAGE_WIDTH = 1640
 IMAGE_HEIGHT = 1232
-TARGET_FPS = 20         
-JPEG_QUALITY = 75 
+TARGET_FPS = 20
+JPEG_QUALITY = 75
 
 # Initialize JetBot Camera
 camera = None
@@ -27,6 +28,7 @@ try:
     print("Initializing JetBot Camera...")
     camera = Camera.instance(width=IMAGE_WIDTH, height=IMAGE_HEIGHT)
     import time
+
     time.sleep(1)  # let camera warm up
     test_frame = camera.value
     if test_frame is not None:
@@ -50,9 +52,9 @@ except Exception as e:
 
 async def main():
     # Initialize servers
-    websocket_server = WebSocketServer(WEBSOCKET_HOST, WEBSOCKET_PORT)
+    websocket_server = WebSocketServer(WEBSOCKET_HOST, WEBSOCKET_PORT, robot)
     await websocket_server.start()
-    
+
     # Initialize API server if robot is available
     api_server = None
     if robot is not None:
@@ -87,22 +89,14 @@ async def main():
                     continue
 
                 # Encode JPEG off the main loop
-                ok, buf = await asyncio.to_thread(
-                    cv2.imencode, ".jpg", frame,
-                    [int(cv2.IMWRITE_JPEG_QUALITY), JPEG_QUALITY]
-                )
+                ok, buf = await asyncio.to_thread(cv2.imencode, ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), JPEG_QUALITY])
                 if not ok:
                     continue
 
                 # Get current robot command from API server
                 current_control = api_server.current_command if api_server else None
-                
-                await websocket_server.broadcast_payload(
-                    buf.tobytes(),
-                    left_motor=robot.left_motor.value if robot else 0.0,
-                    right_motor=robot.right_motor.value if robot else 0.0,
-                    control=current_control
-                )
+
+                await websocket_server.broadcast_payload(buf.tobytes(), left_motor=robot.left_motor.value if robot else 0.0, right_motor=robot.right_motor.value if robot else 0.0, control=current_control)
             except Exception as e:
                 print(f"[stream] error: {e}")
                 await asyncio.sleep(0.1)
