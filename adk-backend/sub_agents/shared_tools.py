@@ -479,6 +479,7 @@ def scan_environment_tool(query: list[str]) -> dict:
     # Use query params like view_query does
     params = [("words", word) for word in query]
     response = requests.post(url, params=params)
+    print(f"[ADK-API] Scan response: {response.json()}")
     try:
         return response.json()
     except requests.exceptions.JSONDecodeError:

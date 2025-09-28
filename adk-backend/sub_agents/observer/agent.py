@@ -54,7 +54,7 @@ observer = Agent(
     - IF YOU DO NOT FIND ANY NEW INFORMATION, YOU AND THE PILOT MUST COLLABORATE AND MOVE TO A NEW LOCATION.
     
     Available tools:
-    - view_query: Search for specific objects and learn if they are within current line of sight.
+    - view_query: Search for specific objects and learn if they are within current line of sight. Make these generic items that will be passed to YoloE and not proper or specific nouns.
     - scan_environment: Perform a full 360 degree scan of the environment, learning if target items are in range. ONLY USE THIS ONCE PER TURN.
     - mission_complete: End mission when target is found
     - get_bounding_box_percentage: Get the percentage of the camera view that is covered by the bounding box of the object, grabbed either by scan_env or view_query.
