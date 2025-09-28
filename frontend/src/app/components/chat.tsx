@@ -420,12 +420,12 @@ export function Chat({ session }: { session: SessionToken | null }) {
     return (
         <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] flex flex-col justify-end gap-2 p-2 text-xs">
             <div className="flex items-center justify-between mb-1">
-                <div className="text-gray-300">Chat</div>
+                <div className="text-gray-300">CHAT</div>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
                         onClick={() => setTtsEnabled((v) => !v)}
-                        className={`border p-1 px-2 rounded-sm ${
+                        className={`border p-1 rounded-sm ${
                             ttsEnabled
                                 ? "border-indigo-400 text-indigo-300"
                                 : "border-gray-500 text-gray-400"
@@ -446,7 +446,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
                         <button
                             type="button"
                             onClick={toggleMic}
-                            className={`border p-1 px-2 rounded-sm ${
+                            className={`border p-1 rounded-sm ${
                                 loading || speaking
                                     ? "border-gray-700 text-gray-700 cursor-not-allowed"
                                     : support && micArmed
@@ -478,7 +478,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
 
             <div
                 id="chat-messages"
-                className="w-full max-h-[320px] bg-[#171717] flex flex-col gap-1 overflow-auto"
+                className="w-full h-[320px] bg-[#171717] flex flex-col gap-1 overflow-auto"
             >
                 {messages.map((m, i) => (
                     <div

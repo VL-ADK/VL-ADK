@@ -21,14 +21,12 @@ export function VideoStream({
     //<img className="h-full w-auto rounded-md shadow-md border-2 border-[#27303e]" src="static.gif"/>
     return (
         <div className={`size-full relative`}>
-            <div className="size-full absolute top-0 left-0">
-                <div className="flex flex-row p-1 gap-1 text-sm">
-                    {currentPrompts.length > 0 && (
-                        <div className="p-1 bg-[#171717]/75 rounded-lg text-white w-fit">
-                            PROMPTS: {currentPrompts.join(", ")}
-                        </div>
-                    )}
-                </div>
+            <div className="absolute bottom-2 left-2 flex flex-row p-1 gap-1 text-sm">
+                {currentPrompts.length > 0 && (
+                    <div className="p-0.5 px-4 text-base font-semibold bg-[#171717] text-white w-fit">
+                        {">>"} PROMPTS: {currentPrompts.join(", ").toUpperCase()}
+                    </div>
+                )}
             </div>
             {image != "" ? (
                 <img

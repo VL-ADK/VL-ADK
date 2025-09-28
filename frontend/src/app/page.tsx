@@ -123,7 +123,7 @@ export default function Home() {
                 {/* Left: Controls */}
                 <div className="col-span-3 flex flex-col gap-1 min-h-0">
                     <div className="text-xs p-1 px-2 border-2 border-green-900 bg-green-900 rounded-sm w-fit">
-                        CONTROLS
+                        MANUAL CONTROLS
                     </div>
                     {/* make the controls fill the remaining column height */}
                     <div className="flex-1 min-h-0">

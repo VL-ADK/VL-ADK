@@ -59,22 +59,22 @@ export function AgentGraph() {
         <svg className="size-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] p-2 text-xs">
             {/* Director Agent */}
             <g
-                stroke={activeAgent === "director" ? "#22c55e" : "#4b5563"}
+                stroke={activeAgent === "director" ? "#22c55e" : "#ededed"}
                 strokeWidth={activeAgent === "director" ? "3" : "1"}
             >
                 <rect
                     x="35%"
-                    y="5%"
+                    y="11%"
                     width="30%"
                     height="8%"
-                    fill={activeAgent === "director" ? "#16a34a" : "#374151"}
+                    fill={activeAgent === "director" ? "#16a34a" : "#37415100"}
                     className={
                         activeAgent === "director" ? "animate-pulse" : ""
                     }
                 />
                 <text
                     x="50%"
-                    y="9%"
+                    y="15%"
                     textAnchor="middle"
                     strokeWidth={0.5}
                     dominantBaseline="middle"
@@ -91,8 +91,8 @@ export function AgentGraph() {
             {/* Director Tools */}
             <g>
                 <text
-                    x="35%"
-                    y="15%"
+                    x="25%"
+                    y="11%"
                     textAnchor="middle"
                     className={
                         activeTool === "initialize_mission"
@@ -104,8 +104,8 @@ export function AgentGraph() {
                     init
                 </text>
                 <text
-                    x="45%"
-                    y="15%"
+                    x="75%"
+                    y="11%"
                     textAnchor="middle"
                     className={
                         activeTool === "rotate" && activeAgent === "director"
@@ -117,8 +117,8 @@ export function AgentGraph() {
                     rotate
                 </text>
                 <text
-                    x="55%"
-                    y="15%"
+                    x="25%"
+                    y="21%"
                     textAnchor="middle"
                     className={
                         activeTool === "move_forward" &&
@@ -131,8 +131,8 @@ export function AgentGraph() {
                     move
                 </text>
                 <text
-                    x="65%"
-                    y="15%"
+                    x="75%"
+                    y="21%"
                     textAnchor="middle"
                     className={
                         activeTool === "view_query" &&
@@ -146,7 +146,7 @@ export function AgentGraph() {
                 </text>
                 <text
                     x="50%"
-                    y="18%"
+                    y="26%"
                     textAnchor="middle"
                     className={
                         activeTool === "mission_complete" &&
@@ -163,31 +163,32 @@ export function AgentGraph() {
             {/* Arrow down */}
             <line
                 x1="50%"
-                y1="22%"
+                y1="30%"
                 x2="50%"
-                y2="32%"
-                stroke="#10b981"
+                y2="40%"
+                stroke="#ededed"
+                fill="#ededed"
                 strokeWidth="2"
                 markerEnd="url(#arrowhead)"
             />
 
             {/* Loop Container */}
-            <g stroke="#4b5563" strokeWidth="1" fill="none">
-                <rect
-                    x="15%"
-                    y="32%"
-                    width="70%"
-                    height="58%"
-                    rx="5"
-                    fill="#374151"
-                    fillOpacity="0.1"
+            <g stroke="#ededed" strokeWidth="1" fill="none">
+                <line
+                    x1="25%"
+                    y1="50%"
+                    x2="75%"
+                    y2="50%"
+                    fill="#ededed"
+                    fillOpacity="0.0"
                 />
                 <text
-                    x="17%"
-                    y="37%"
-                    className="fill-gray-500"
-                    fontSize="10"
-                    letterSpacing="0.1em"
+                    x="25%"
+                    y="48%"
+                    strokeWidth="0"
+                    className="fill-[#ededed]"
+                    fontSize="12"
+                    letterSpacing="0.05em"
                 >
                     EXECUTION LOOP
                 </text>
@@ -195,22 +196,22 @@ export function AgentGraph() {
 
             {/* Observer Agent */}
             <g
-                stroke={activeAgent === "observer" ? "#fbbf24" : "#4b5563"}
+                stroke={activeAgent === "observer" ? "#fbbf24" : "#ededed"}
                 strokeWidth={activeAgent === "observer" ? "3" : "1"}
             >
                 <rect
                     x="25%"
-                    y="47%"
+                    y="53%"
                     width="20%"
                     height="12%"
-                    fill={activeAgent === "observer" ? "#d97706" : "#374151"}
+                    fill={activeAgent === "observer" ? "#d97706" : "#ededed00"}
                     className={
                         activeAgent === "observer" ? "animate-pulse" : ""
                     }
                 />
                 <text
                     x="35%"
-                    y="53%"
+                    y="59%"
                     textAnchor="middle"
                     strokeWidth={0.5}
                     dominantBaseline="middle"
@@ -222,39 +223,24 @@ export function AgentGraph() {
                 >
                     OBSERVER
                 </text>
-                <text
-                    x="35%"
-                    y="56%"
-                    textAnchor="middle"
-                    strokeWidth={0.5}
-                    dominantBaseline="middle"
-                    className={
-                        activeAgent === "observer"
-                            ? "fill-orange-200"
-                            : "fill-gray-500"
-                    }
-                    fontSize="10"
-                >
-                    Vision
-                </text>
             </g>
 
             {/* Pilot Agent */}
             <g
-                stroke={activeAgent === "pilot" ? "#f87171" : "#4b5563"}
+                stroke={activeAgent === "pilot" ? "#f87171" : "#ededed"}
                 strokeWidth={activeAgent === "pilot" ? "3" : "1"}
             >
                 <rect
                     x="55%"
-                    y="47%"
+                    y="53%"
                     width="20%"
                     height="12%"
-                    fill={activeAgent === "pilot" ? "#dc2626" : "#374151"}
+                    fill={activeAgent === "pilot" ? "#dc2626" : "#37415100"}
                     className={activeAgent === "pilot" ? "animate-pulse" : ""}
                 />
                 <text
                     x="65%"
-                    y="53%"
+                    y="59%"
                     textAnchor="middle"
                     strokeWidth={0.5}
                     dominantBaseline="middle"
@@ -264,40 +250,36 @@ export function AgentGraph() {
                 >
                     PILOT
                 </text>
-                <text
-                    x="65%"
-                    y="56%"
-                    textAnchor="middle"
-                    strokeWidth={0.5}
-                    dominantBaseline="middle"
-                    className={
-                        activeAgent === "pilot"
-                            ? "fill-red-200"
-                            : "fill-gray-500"
-                    }
-                    fontSize="10"
-                >
-                    Movement
-                </text>
             </g>
 
             {/* Loop text */}
-            <text
-                x="50%"
-                y="75%"
-                textAnchor="middle"
-                className="fill-gray-500"
-                fontSize="12"
-            >
-                Loop Until Complete
-            </text>
+            <g>
+              <rect
+                x="32.5%"
+                y="70.5%"
+                width="15%"
+                height="8%"
+                stroke="#ededed"
+                fill="#ededed00"
+                />
+              <text
+                  x="40%"
+                  y="76%"
+                  textAnchor="middle"
+                  className="fill-[#ededed]"
+                  fontSize="12"
+              >
+                  UNTIL
+              </text>
+            </g>
+            
 
             {/* All Tools in 2x3 Grid */}
             <g>
                 {/* Row 1: Observer tools */}
                 <text
-                    x="25%"
-                    y="80%"
+                    x="12%"
+                    y="58%"
                     textAnchor="middle"
                     className={
                         activeTool === "view_query"
@@ -306,11 +288,11 @@ export function AgentGraph() {
                     }
                     fontSize="12"
                 >
-                    view_query
+                    query
                 </text>
                 <text
-                    x="50%"
-                    y="80%"
+                    x="88%"
+                    y="56%"
                     textAnchor="middle"
                     className={
                         activeTool === "move_forward" && activeAgent === "pilot"
@@ -322,8 +304,8 @@ export function AgentGraph() {
                     move
                 </text>
                 <text
-                    x="75%"
-                    y="80%"
+                    x="88%"
+                    y="61%"
                     textAnchor="middle"
                     className={
                         activeTool === "rotate" && activeAgent === "pilot"
@@ -337,8 +319,8 @@ export function AgentGraph() {
 
                 {/* Row 2: More tools */}
                 <text
-                    x="25%"
-                    y="87%"
+                    x="12%"
+                    y="64%"
                     textAnchor="middle"
                     className={
                         activeTool === "scan_environment" &&
@@ -351,8 +333,8 @@ export function AgentGraph() {
                     scan
                 </text>
                 <text
-                    x="50%"
-                    y="87%"
+                    x="60%"
+                    y="76%"
                     textAnchor="middle"
                     className={
                         activeTool === "mission_complete" &&
@@ -365,8 +347,8 @@ export function AgentGraph() {
                     complete
                 </text>
                 <text
-                    x="75%"
-                    y="87%"
+                    x="88%"
+                    y="66%"
                     textAnchor="middle"
                     className="fill-gray-600"
                     fontSize="12"
@@ -379,13 +361,13 @@ export function AgentGraph() {
             <defs>
                 <marker
                     id="arrowhead"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="10"
-                    refY="3.5"
+                    markerWidth="2.5"
+                    markerHeight="5"
+                    refX="2.55"
+                    refY="2.5"
                     orient="auto"
                 >
-                    <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+                    <polygon points="0 0, 2.5 2.5, 0 5" fill="#ededed" />
                 </marker>
             </defs>
         </svg>
