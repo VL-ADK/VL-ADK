@@ -73,7 +73,7 @@ export default function Home() {
             {/* Header */}
             <div className="text-2xl font-bold w-full p-1 px-2 bg-gradient-to-b from-[#364153] to-[#27303e] border-[#27303e] shadow-md flex flex-row justify-between border-2 rounded-md">
                 <div className="flex flex-row gap-4">
-                    VL-ADK
+                    <div className="flex flex-row gap-1"><img src="/VL_ADK_Logo.png" alt="VL-ADK" width={32} height={32} />VL-ADK</div>
                     <div className="text-sm text-gray-300 font-normal my-auto flex flex-row gap-2">
                         <div
                             className={`w-2 h-2 rounded-full my-auto ${
