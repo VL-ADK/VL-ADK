@@ -2,6 +2,7 @@
 
 import base64
 import os
+from typing import Optional
 
 import requests
 from google.adk.tools import FunctionTool, ToolContext
@@ -47,29 +48,6 @@ def mission_complete_tool(reason: str, tool_context: ToolContext) -> dict:
 
 
 mission_complete = FunctionTool(func=mission_complete_tool)
-
-
-def complete_step_tool(step_id: int, result: str, tool_context: ToolContext) -> dict:
-    """Mark a step as completed and record the result."""
-    execution_plan = tool_context.state.get("temp:execution_plan", [])
-
-    # Find and update the step
-    step_updated = False
-    for step in execution_plan:
-        if step.get("id") == step_id:
-            step["status"] = "completed"
-            step["result"] = result
-            step_updated = True
-            break
-
-    if step_updated:
-        tool_context.state["temp:execution_plan"] = execution_plan
-        return {"status": "Step completed", "step_id": step_id, "result": result}
-    else:
-        return {"status": "Step not found", "step_id": step_id}
-
-
-complete_step = FunctionTool(func=complete_step_tool)
 
 
 # ----------------------------
@@ -348,6 +326,68 @@ def move_backward_tool(speed: float, duration: float) -> dict:
 move_backward = FunctionTool(func=move_backward_tool)
 
 
+def move_backward_distance_tool(distance_in_meters: Optional[float], distance_in_feet: Optional[float]) -> dict:
+    """Move the robot backward a given amount of meters.
+
+    Args:
+        distance_in_meters (float): The amount of meters to move backward. Optional, but if provided, distance_in_feet will be ignored.
+        distance_in_feet (float): The amount of feet to move backward. Optional, but if provided, distance_in_meters will be ignored.
+
+    SPATIAL REASONING FOR MOVING (FORWARD/BACKWARD):
+    - The diameter of the robot's wheels are 0.065 meters. (65 millimeters)
+    - The circumference of the robot's wheels are 0.204 meters. (204 millimeters)
+    - The radius of the robot's wheels are 0.0325 meters. (32.5 millimeters)
+
+    Returns:
+        dict: Status response from robot API
+    """
+    if distance_in_meters is not None:
+        distance = distance_in_meters
+    elif distance_in_feet is not None:
+        distance = distance_in_feet * 0.3048
+    else:
+        return {"error": "No distance provided"}
+
+    # Calculate duration in seconds
+    duration = distance / 0.572  # 0.572 m/s is the default speed
+
+    return move_backward_tool(speed=0.5, duration=duration)
+
+
+move_backward_distance = FunctionTool(func=move_backward_distance_tool)
+
+
+def move_forward_distance_tool(distance_in_meters: Optional[float], distance_in_feet: Optional[float]) -> dict:
+    """Move the robot forward a given amount of meters.
+
+    Args:
+        distance_in_meters (float): The amount of meters to move forward. Optional, but if provided, distance_in_feet will be ignored.
+        distance_in_feet (float): The amount of feet to move forward. Optional, but if provided, distance_in_meters will be ignored.
+
+    SPATIAL REASONING FOR MOVING (FORWARD/BACKWARD):
+    - The diameter of the robot's wheels are 0.065 meters. (65 millimeters)
+    - The circumference of the robot's wheels are 0.204 meters. (204 millimeters)
+    - The radius of the robot's wheels are 0.0325 meters. (32.5 millimeters)
+
+    Returns:
+        dict: Status response from robot API
+    """
+    if distance_in_meters is not None:
+        distance = distance_in_meters
+    elif distance_in_feet is not None:
+        distance = distance_in_feet * 0.3048
+    else:
+        return {"error": "No distance provided"}
+
+    # Calculate duration in seconds
+    duration = distance / 0.572  # 0.572 m/s is the default speed
+
+    return move_forward_tool(speed=0.5, duration=duration)
+
+
+move_forward_distance = FunctionTool(func=move_forward_distance_tool)
+
+
 def rotate_tool(angle_in_degrees: float, speed: float) -> dict:
     """Rotate the robot by specified angle (uses unified /rotate/ endpoint).
 
@@ -423,6 +463,18 @@ def scan_environment_tool(query: list[str]) -> dict:
     """
 
     print(f"[ADK-API] Scanning environment for: {query}")
+
+    # First, set the prompts in the YOLO model so it can detect these objects
+    print(f"[ADK-API] Setting YOLO prompts to: {query}")
+    yolo_prompts_url = "http://localhost:8001/prompts/"
+    try:
+        prompts_response = requests.post(yolo_prompts_url, json=query)
+        if prompts_response.status_code != 200:
+            print(f"[ADK-API] Warning: Failed to set YOLO prompts: {prompts_response.text}")
+    except Exception as e:
+        print(f"[ADK-API] Warning: Failed to set YOLO prompts: {e}")
+
+    # Now call the JetBot scan endpoint
     url = f"{_ROBOT_BASE}/scan/"
     # Use query params like view_query does
     params = [("words", word) for word in query]

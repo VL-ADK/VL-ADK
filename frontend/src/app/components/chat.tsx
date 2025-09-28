@@ -23,16 +23,148 @@ const VOICE_MAP: Record<string, string> = {
 };
 const DEFAULT_VOICE = "Zephyr"; // fallback to Director voice
 
+// TTS Mode Flag - Controls which TTS system to use
+// 'browser' = Use browser's built-in speechSynthesis API (free, unlimited, works offline)
+// 'gemini' = Use Gemini TTS API (high quality, but has quotas and costs)
+const TTS_MODE: "browser" | "gemini" = "browser";
+
 function voiceForAuthor(author?: string): string {
     if (!author) return DEFAULT_VOICE;
     const key = String(author).toUpperCase().trim();
     return VOICE_MAP[key] || DEFAULT_VOICE;
 }
 
+// Browser TTS fallback using speechSynthesis API
+function browserTTS(text: string, voiceName: string): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+        if (!window.speechSynthesis) {
+            reject(new Error("Browser TTS not supported"));
+            return;
+        }
+
+        console.log("Browser TTS available, creating utterance...");
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Map our agent voices to browser voices
+        let voices = speechSynthesis.getVoices();
+
+        // If voices aren't loaded yet, wait for them
+        if (voices.length === 0) {
+            await new Promise<void>((resolveVoices) => {
+                const loadVoices = () => {
+                    voices = speechSynthesis.getVoices();
+                    if (voices.length > 0) {
+                        speechSynthesis.removeEventListener(
+                            "voiceschanged",
+                            loadVoices
+                        );
+                        resolveVoices();
+                    }
+                };
+                speechSynthesis.addEventListener("voiceschanged", loadVoices);
+                // Fallback timeout
+                setTimeout(() => {
+                    speechSynthesis.removeEventListener(
+                        "voiceschanged",
+                        loadVoices
+                    );
+                    resolveVoices();
+                }, 1000);
+            });
+        }
+
+        let selectedVoice = null;
+        console.log(`Available voices: ${voices.length}`);
+        console.log(`Voice names: ${voices.map((v) => v.name).join(", ")}`);
+
+        // Try to find a good voice match based on agent
+        if (voiceName === "Zephyr") {
+            // Director - prefer male voices
+            selectedVoice = voices.find(
+                (v) =>
+                    v.name.includes("Male") ||
+                    v.name.includes("Alex") ||
+                    v.name.includes("Daniel") ||
+                    v.name.includes("David") ||
+                    v.name.includes("Tom")
+            );
+        } else if (voiceName === "Puck") {
+            // Pilot - prefer energetic female voices
+            selectedVoice = voices.find(
+                (v) =>
+                    v.name.includes("Samantha") ||
+                    v.name.includes("Karen") ||
+                    v.name.includes("Female") ||
+                    v.name.includes("Susan") ||
+                    v.name.includes("Victoria")
+            );
+        } else if (voiceName === "Vega") {
+            // Observer - prefer analytical female voices
+            selectedVoice = voices.find(
+                (v) =>
+                    v.name.includes("Victoria") ||
+                    v.name.includes("Moira") ||
+                    v.name.includes("Female") ||
+                    v.name.includes("Samantha") ||
+                    v.name.includes("Karen")
+            );
+        }
+
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            console.log(`Selected specific voice: ${selectedVoice.name}`);
+        } else if (voices.length > 0) {
+            // Fallback to first available voice
+            utterance.voice = voices[0];
+            console.log(`Using fallback voice: ${voices[0].name}`);
+        } else {
+            console.log("No voices available, using default");
+        }
+
+        // Configure speech
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0; // Max volume
+
+        utterance.onend = () => {
+            console.log("Browser TTS completed successfully");
+            resolve();
+        };
+        utterance.onerror = (e) => {
+            console.error("Browser TTS error:", e);
+            reject(new Error(`Browser TTS error: ${e.error}`));
+        };
+        utterance.onstart = () => {
+            console.log("Browser TTS started speaking");
+        };
+
+        console.log(`Speaking with voice: ${selectedVoice?.name || "default"}`);
+        console.log(`Text: "${text}"`);
+
+        // Check if speech synthesis is already speaking
+        if (speechSynthesis.speaking) {
+            console.log(
+                "Speech synthesis already speaking, stopping current speech"
+            );
+            speechSynthesis.cancel();
+        }
+
+        speechSynthesis.speak(utterance);
+    });
+}
+
 async function ttsFetch(
     text: string,
     voiceName: string
-): Promise<HTMLAudioElement> {
+): Promise<HTMLAudioElement | null> {
+    if (TTS_MODE === "browser") {
+        // Use browser TTS directly
+        console.log(`Using browser TTS for ${voiceName}`);
+        await browserTTS(text, voiceName);
+        return null; // Return null to indicate browser TTS was used
+    }
+
+    // Use Gemini TTS with browser fallback
     try {
         const res = await fetch("/api/tts", {
             method: "POST",
@@ -40,7 +172,9 @@ async function ttsFetch(
             body: JSON.stringify({ text, voiceName }),
         });
         if (!res.ok) {
-            console.warn(`TTS failed: ${res.status} ${res.statusText}`);
+            console.warn(
+                `Gemini TTS failed: ${res.status} ${res.statusText}, falling back to browser TTS`
+            );
             throw new Error(`TTS ${res.status} ${res.statusText}`);
         }
         const blob = await res.blob();
@@ -52,8 +186,10 @@ async function ttsFetch(
         });
         return audio;
     } catch (error) {
-        console.warn("TTS error:", error);
-        throw error;
+        console.warn("Gemini TTS error, using browser fallback:", error);
+        // Use browser TTS as fallback
+        await browserTTS(text, voiceName);
+        return null; // Return null to indicate browser TTS was used
     }
 }
 
@@ -65,8 +201,8 @@ export function Chat({ session }: { session: SessionToken | null }) {
     // Mic “armed” state (auto-resume after replies)
     const [micArmed, setMicArmed] = useState(false);
 
-    // TTS toggle - disabled by default due to quota limits
-    const [ttsEnabled, setTtsEnabled] = useState(false);
+    // TTS toggle - enabled with browser fallback for accessibility
+    const [ttsEnabled, setTtsEnabled] = useState(true);
 
     // Is any audio currently playing?
     const [speaking, setSpeaking] = useState(false);
@@ -124,6 +260,13 @@ export function Chat({ session }: { session: SessionToken | null }) {
     // ---- TTS queue worker ----
     const enqueueTTS = (text: string, voice: string) => {
         if (!ttsEnabled) return;
+
+        // Filter out tool calls and responses - they sound terrible with TTS
+        if (text.includes("CALLING TOOL:") || text.includes("TOOL RESPONSE:")) {
+            console.log("Skipping TTS for tool call/response:", text);
+            return;
+        }
+
         // Clean up text for TTS
         const cleanText = text.replace(/\[.*?\]/g, "").trim(); // Remove [AGENT] prefixes
         if (!cleanText) return;
@@ -149,45 +292,35 @@ export function Chat({ session }: { session: SessionToken | null }) {
 
         try {
             const audio = await ttsFetch(next.text, next.voice);
-            await audio.play();
-            await new Promise<void>((resolve) => {
-                audio.addEventListener("ended", () => resolve(), {
-                    once: true,
-                });
-                audio.addEventListener(
-                    "error",
-                    (e) => {
-                        console.warn("Audio playback error:", e);
-                        resolve();
-                    },
-                    {
+
+            if (audio) {
+                // Gemini TTS succeeded - play audio
+                await audio.play();
+                await new Promise<void>((resolve) => {
+                    audio.addEventListener("ended", () => resolve(), {
                         once: true,
-                    }
-                );
-                // Add timeout to prevent hanging
-                setTimeout(() => resolve(), 10000); // 10 second timeout
-            });
+                    });
+                    audio.addEventListener(
+                        "error",
+                        (e) => {
+                            console.warn("Audio playback error:", e);
+                            resolve();
+                        },
+                        {
+                            once: true,
+                        }
+                    );
+                    // Add timeout to prevent hanging
+                    setTimeout(() => resolve(), 10000); // 10 second timeout
+                });
+            } else {
+                // Browser TTS was used (already completed in ttsFetch)
+                console.log("Browser TTS completed for:", next.voice);
+            }
         } catch (e) {
             // TTS failed - continue with queue anyway
             console.warn("TTS worker error:", e);
-            // If TTS consistently fails, disable it temporarily
-            if (
-                e instanceof Error &&
-                (e.message.includes("503") ||
-                    e.message.includes("500") ||
-                    e.message.includes("429"))
-            ) {
-                if (e.message.includes("429")) {
-                    console.warn("TTS quota exceeded - disabling temporarily");
-                } else {
-                    console.warn(
-                        "TTS service unavailable - disabling temporarily"
-                    );
-                }
-                setTtsEnabled(false);
-                // Clear remaining queue to prevent spam
-                ttsQueueRef.current = [];
-            }
+            // Note: We don't disable TTS since we have browser fallback
         } finally {
             ttsPlayingRef.current = false;
             setSpeaking(false);
@@ -277,6 +410,8 @@ export function Chat({ session }: { session: SessionToken | null }) {
 
         // Extract all text parts in this event
         const parts: string[] = [];
+        let toolName: string | null = null;
+
         if (o?.content?.parts && Array.isArray(o.content.parts)) {
             for (const p of o.content.parts) {
                 if (p?.text && typeof p.text === "string" && p.text.trim()) {
@@ -287,6 +422,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
                     const funcName = p.functionCall.name || "unknown";
                     const funcArgs = JSON.stringify(p.functionCall.args || {});
                     parts.push(`CALLING TOOL: ${funcName}(${funcArgs})`);
+                    toolName = funcName; // Capture for agent graph
                 }
                 if (p?.functionResponse) {
                     const funcName = p.functionResponse.name || "unknown";
@@ -303,6 +439,15 @@ export function Chat({ session }: { session: SessionToken | null }) {
 
         const author = String(o.author || "agent");
         currentAuthorRef.current = author;
+
+        // Dispatch custom event for agent graph
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(
+                new CustomEvent("agentActivity", {
+                    detail: { author, toolName },
+                })
+            );
+        }
 
         // Partial token event: update one bubble, accumulate text
         if (o.partial === true) {
@@ -418,7 +563,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
     };
 
     return (
-        <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] flex flex-col justify-end gap-2 p-2 text-xs">
+        <div className="h-full border-2 border-[#27303e] rounded-md shadow-md bg-[#171717] flex flex-col gap-2 p-2 text-xs">
             <div className="flex items-center justify-between mb-1">
                 <div className="text-gray-300">CHAT</div>
                 <div className="flex items-center gap-2">
@@ -441,6 +586,75 @@ export function Chat({ session }: { session: SessionToken | null }) {
                         ) : (
                             <VolumeX className="w-4 h-4" />
                         )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            console.log("Testing browser TTS...");
+                            // Test with a simple utterance first
+                            const utterance = new SpeechSynthesisUtterance(
+                                "Hello world"
+                            );
+                            utterance.volume = 1.0;
+                            utterance.rate = 0.8;
+                            utterance.pitch = 1.0;
+
+                            utterance.onstart = () =>
+                                console.log("Simple TTS started");
+                            utterance.onend = () =>
+                                console.log("Simple TTS ended");
+                            utterance.onerror = (e) =>
+                                console.error("Simple TTS error:", e);
+
+                            speechSynthesis.speak(utterance);
+                        }}
+                        className="border p-1 px-2 rounded-sm border-blue-400 text-blue-300"
+                        title="Test browser TTS"
+                    >
+                        Test
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            console.log("Testing audio context...");
+                            // Try to create an audio context to test audio
+                            try {
+                                const audioContext = new (window.AudioContext ||
+                                    (window as any).webkitAudioContext)();
+                                console.log(
+                                    "Audio context created:",
+                                    audioContext.state
+                                );
+
+                                // Test with oscillator
+                                const oscillator =
+                                    audioContext.createOscillator();
+                                const gainNode = audioContext.createGain();
+
+                                oscillator.connect(gainNode);
+                                gainNode.connect(audioContext.destination);
+
+                                oscillator.frequency.setValueAtTime(
+                                    440,
+                                    audioContext.currentTime
+                                );
+                                gainNode.gain.setValueAtTime(
+                                    0.1,
+                                    audioContext.currentTime
+                                );
+
+                                oscillator.start();
+                                oscillator.stop(audioContext.currentTime + 0.5);
+
+                                console.log("Audio test tone played");
+                            } catch (e) {
+                                console.error("Audio context error:", e);
+                            }
+                        }}
+                        className="border p-1 px-2 rounded-sm border-green-400 text-green-300"
+                        title="Test audio system"
+                    >
+                        Audio
                     </button>
                     {support !== null && (
                         <button

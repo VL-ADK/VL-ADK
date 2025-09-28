@@ -3,22 +3,25 @@
 # - Manages HTTP API endpoints for robot control
 # - Provides movement commands: forward, backward, left, right, stop
 
-import time
-import uvicorn
+import math
 import threading
+import time
 from typing import Optional
+
+import requests
+import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from jetbot import Robot
 from models import RobotControlMessage
-import requests
-import math
-from fastapi.middleware.cors import CORSMiddleware
+
 
 class RobotActions:
     """
     Class to control a JetBot robot.
     Provides basic movement functions: forward, backward, left, right, stop.
     """
+
     def __init__(self, robot):
         self.robot = robot
         self.current_angle = 0
@@ -26,31 +29,31 @@ class RobotActions:
         self.found_items = []
         self.CALIBRATED_ANGULAR_VELOCITY = 2.3
 
-    def gc_found_items(self, ttl = 1000*60):
+    def gc_found_items(self, ttl=1000 * 60):
         new_list = []
         for item in self.found_items:
-            if (int(time.time() * 1000)-item['timestamp_ms']-ttl < 0):
+            if int(time.time() * 1000) - item["timestamp_ms"] - ttl < 0:
                 new_list.append(item)
         self.found_items = new_list
-            
+
     # --- Core movement function ---
     def _set_motors(self, left_speed: float, right_speed: float, duration: float, smooth_step: bool = True):
         """
         Set motor speeds and optionally stop after duration.
         """
-        
+
         self.robot.left_motor.value = left_speed
         self.robot.right_motor.value = right_speed
         if duration is not None:
             if smooth_step:
                 # Start slowing down at the last 10% of the duration
-                start_slow_down = (duration*0.1)
-                time.sleep(duration-start_slow_down)
+                start_slow_down = duration * 0.1
+                time.sleep(duration - start_slow_down)
 
                 # Each step will take 1% of a second
                 step_time = 0.01
                 # Get the number of steps so we take the rest of our duration
-                steps = int(start_slow_down/step_time)
+                steps = int(start_slow_down / step_time)
                 self.smooth_stop(step_time, steps)
             else:
                 time.sleep(duration)
@@ -61,48 +64,44 @@ class RobotActions:
         yolo_url = "http://localhost:8001/yolo/"
         params = [("words", word) for word in query]
 
+        requests.post(yolo_url + "append-prompts/", params=params)
+
         total_angle = 4
         turns = 4
-        sleep_directive = 1/turns
+        sleep_directive = 3 / turns
         for i in range(turns):
             response = requests.get(yolo_url, params=params)
             resp_json = response.json()
             print(resp_json)
             for annotation in resp_json["annotations"]:
-                self.found_items.append({"item": annotation["class"], 
-                                         "seen_at_x": self.current_coord["x"],
-                                         "seen_at_y": self.current_coord["y"],
-                                         "angle": self.current_angle + annotation["rotation_degree"],
-                                         "timestamp_ms": int(time.time() * 1000)})
+                self.found_items.append({"item": annotation["class"], "seen_at_x": self.current_coord["x"], "seen_at_y": self.current_coord["y"], "angle": self.current_angle + annotation["rotation_degree"], "timestamp_ms": int(time.time() * 1000)})
 
-            self.rotate(total_angle/turns)
+            self.rotate(total_angle / turns)
             time.sleep(sleep_directive)
-        
+
         return {"x": self.current_coord["x"], "y": self.current_coord["y"], "angle": self.current_angle, "items": self.found_items}
 
     # --- Public movement functions ---
     def move_forward(self, speed: float = 0.5, duration: float = 1):
-        self.current_coord = {"x": math.cos(math.radians(self.current_angle)) * (speed*duration),
-                              "y": math.sin(math.radians(self.current_angle)) * (speed*duration)}
+        self.current_coord = {"x": math.cos(math.radians(self.current_angle)) * (speed * duration), "y": math.sin(math.radians(self.current_angle)) * (speed * duration)}
         self._set_motors(speed, speed, duration)
 
     def move_backward(self, speed: float = 0.5, duration: float = 1):
-        self.current_coord = {"x": math.cos(math.radians(self.current_angle)) * (-speed*duration),
-                        "y": math.sin(math.radians(self.current_angle)) * (-speed*duration)}
+        self.current_coord = {"x": math.cos(math.radians(self.current_angle)) * (-speed * duration), "y": math.sin(math.radians(self.current_angle)) * (-speed * duration)}
         self._set_motors(-speed, -speed, duration)
 
     def rotate(self, angle: float):
         speed = 0.5
 
         angle_rad = math.radians(angle)
-        omega = self.CALIBRATED_ANGULAR_VELOCITY*(speed/0.5)
+        omega = self.CALIBRATED_ANGULAR_VELOCITY * (speed / 0.5)
         duration = abs(angle_rad / omega)
 
         # left, right
         left_speed = speed if angle > 0 else -speed
         right_speed = -speed if angle > 0 else speed
 
-        self.current_angle = (((self.current_angle+angle)%360)+360)%360
+        self.current_angle = (((self.current_angle + angle) % 360) + 360) % 360
         self._set_motors(left_speed, right_speed, duration, False)
 
     def stop(self):
@@ -148,7 +147,7 @@ class Api:
         self.server = None
         self.current_command: Optional[RobotControlMessage] = None
         self._setup_routes()
-    
+
     def _setup_routes(self):
         """Setup all API routes with the robot actions."""
 
@@ -161,7 +160,7 @@ class Api:
             Returns:
                 x (float): current x position
                 y (float): current y position
-                angle (float): current angle 
+                angle (float): current angle
                 items: A dictionary with the following keys:
                     - item (str): The detected object's class label.
                     - seen_at_x (float): The robot's current x-coordinate when the object was seen.
@@ -200,7 +199,7 @@ class Api:
             self.current_command = RobotControlMessage(status="rotating", angle=angle)
             self.actions.rotate(angle)
             return {"status": "rotating", "angle": angle}
-        
+
         # Stop the robot
         @self.app.post("/stop/")
         def api_stop():
@@ -208,20 +207,15 @@ class Api:
             self.current_command = None
             self.actions.stop()
             return {"status": "stopped"}
-    
+
     # Start the server
     async def start(self):
         """Start the FastAPI server."""
-        config = uvicorn.Config(
-            app=self.app,
-            host=self.host,
-            port=self.port,
-            log_level="info"
-        )
+        config = uvicorn.Config(app=self.app, host=self.host, port=self.port, log_level="info")
         self.server = uvicorn.Server(config)
         print(f"FastAPI server started on {self.host}:{self.port}")
         await self.server.serve()
-    
+
     # Stop the server
     async def stop(self):
         """Stop the FastAPI server."""
