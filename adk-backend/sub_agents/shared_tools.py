@@ -349,7 +349,7 @@ def move_backward_tool(speed: float, duration: float) -> dict:
 move_backward = FunctionTool(func=move_backward_tool)
 
 
-def rotate_tool(angle_in_degrees: float, speed: float = 0.5) -> dict:
+def rotate_tool(angle_in_degrees: float, speed: float) -> dict:
     """Rotate the robot by specified angle (uses unified /rotate/ endpoint).
 
     API behavior:

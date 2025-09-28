@@ -26,7 +26,7 @@ API_PORT = 8001
 JETBOT_WEBSOCKET_URL = "ws://localhost:8890"
 YOLO_MODEL_PATH = "yoloe-l.pt"
 FORCE_CPU = os.getenv("FORCE_CPU", "false").lower() == "true"
-TARGET_FPS = 20
+TARGET_FPS = 15
 
 # Import checks
 try:
@@ -149,7 +149,13 @@ async def main():
                     print(f"Detection error: {detection_results['error']}")
                     continue
 
-                # Skip expensive image processing - we're only sending annotation data
+                # Draw annotations on frame for the annotated stream
+                annotated_frame = model_manager.draw_annotations_on_frame(frame, detection_results["annotations"])
+
+                # Encode annotated frame as JPEG
+                ok, buf = await asyncio.to_thread(cv2.imencode, ".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+                if not ok:
+                    continue
 
                 # Prepare detection data for WebSocket
                 detection_data = {
@@ -158,11 +164,11 @@ async def main():
                     "motor_data": frame_data["motor_data"],
                     "frame_timestamp": frame_data["timestamp"],
                     "detection_timestamp": detection_results["timestamp"],
-                    "image_shape": detection_results.get("image_shape"),
+                    "image_shape": detection_results.get("image_shape", [frame.shape[1], frame.shape[0]]),
                 }
 
-                # Broadcast only annotations (much faster!)
-                await websocket_server.broadcast_annotations(detection_results["annotations"], detection_data)
+                # Broadcast annotated image with detection data
+                await websocket_server.broadcast_annotated_frame(buf.tobytes(), detection_results["annotations"], detection_data)
 
             except Exception as e:
                 print(f"[annotated_stream] error: {e}")

@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 import uvicorn
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def _rotation_deg_from_center(ann: dict, img_h: int, img_w: int, hfov_deg: float) -> float:
@@ -60,6 +61,13 @@ class YoloApi:
         self.port = port
         self.model_manager = model_manager
         self.app = FastAPI(title="YOLO-E API", description="YOLO Object Detection for VL-ADK", version="0.1.0")
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+            allow_credentials=True,
+            allow_methods=["*"],  # GET, POST, OPTIONS, etc.
+            allow_headers=["*"],  # Content-Type, Authorization, etc.
+        )
         self.server = None
         self.debug_save_dir = os.getenv("DEBUG_SAVE_DIR", "./debug_images")
         os.makedirs(self.debug_save_dir, exist_ok=True)
@@ -99,6 +107,11 @@ class YoloApi:
         async def set_detection_prompts(prompts: List[str]):
             """Set new open-vocabulary prompts for YOLO-E detection."""
             return self.model_manager.set_prompts(prompts)
+
+        @self.app.post("/append-prompts/")
+        async def append_prompts(prompts: List[str]):
+            """Append new open-vocabulary prompts for YOLO-E detection."""
+            return self.model_manager.append_prompts(prompts)
 
         @self.app.get("/prompts/")
         async def get_current_prompts():
