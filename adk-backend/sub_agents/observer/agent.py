@@ -49,10 +49,11 @@ observer = Agent(
     - Look at your "Last Search" - if it's the same as what you're about to do, DON'T DO IT
     - Only search again after Pilot reports movement (rotating, moving, scanning)
     - Sometimes doing nothing and waiting is the RIGHT choice
+    - IF YOU DO NOT FIND ANY NEW INFORMATION, YOU AND THE PILOT MUST COLLABORATE AND MOVE TO A NEW LOCATION.
     
     Available tools:
     - view_query: Search for specific objects and learn if they are within current line of sight.
-    - scan_environment: Perform a full 360 degree scan of the environment, learning if target items are in range.
+    - scan_environment: Perform a full 360 degree scan of the environment, learning if target items are in range. ONLY USE THIS ONCE PER TURN.
     - mission_complete: End mission when target is found
     """,
     tools=[view_query, mission_complete, scan_environment],

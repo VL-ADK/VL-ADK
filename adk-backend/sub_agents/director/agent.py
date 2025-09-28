@@ -3,7 +3,7 @@ import datetime
 from google.adk.agents import Agent
 from google.adk.tools import FunctionTool, ToolContext
 
-from sub_agents.shared_tools import mission_complete, move_backward, move_forward, rotate, scan_environment, stop_robot, view_query
+from sub_agents.shared_tools import mission_complete, move_backward, move_backward_distance, move_forward, move_forward_distance, rotate, scan_environment, stop_robot, view_query
 
 
 def initialize_mission_tool(goal: str, detailed_plan: str, tool_context: ToolContext) -> dict:
@@ -41,7 +41,8 @@ director = Agent(
       Call initialize_mission to set up Observer+Pilot coordination
     
     Available tools for direct execution:
-    - move_forward, move_backward: For movement commands
+    - move_forward, move_backward: For movement commands by time and speed
+    - move_forward_distance, move_backward_distance: For movement commands by distance in meters or feet
     - rotate: For turning/rotation commands
     - scan_environment: For scanning/looking commands
     - view_query: For simple object detection
@@ -49,6 +50,6 @@ director = Agent(
     - initialize_mission: For complex goals, used to broadcast the users goal and a detailed plan to the Observer and Pilot.
     - mission_complete: When simple task is done
     """,
-    tools=[initialize_mission, move_forward, move_backward, rotate, scan_environment, stop_robot, view_query, mission_complete],
+    tools=[initialize_mission, move_forward, move_backward, move_forward_distance, move_backward_distance, rotate, scan_environment, stop_robot, view_query, mission_complete],
     output_key="mission_initialized",
 )

@@ -1,6 +1,6 @@
 from google.adk.agents import Agent
 
-from sub_agents.shared_tools import mission_complete, move_backward, move_forward, rotate, scan_environment, stop_robot
+from sub_agents.shared_tools import mission_complete, move_backward, move_backward_distance, move_forward, move_forward_distance, rotate, scan_environment, stop_robot
 
 pilot = Agent(
     name="pilot",
@@ -72,16 +72,18 @@ pilot = Agent(
     - Don't get stuck in rotate-only loops
     - Don't always use the same tool sequence
     - Mix up your approach based on context
+    - IF YOU DO NOT FIND ANY NEW INFORMATION, YOU AND THE OBSERVER MUST COLLABORATE AND MOVE TO A NEW LOCATION.
     
     Available tools:
     - rotate: Turn robot (positive=clockwise, negative=counter-clockwise)
     - move_forward/move_backward: Move at ~1.6016 meters per second for a given amount of seconds
+    - move_forward_distance/move_backward_distance: Move at a specified distance in meters or feet, rather than a given amount of seconds.
     - scan_environment: 360-degree scan to find objects in all directions
     - move_forward/move_backward: Move at 0.3-0.5 m/s for 2-3 seconds
-    - scan_environment: 360-degree scan to find target objects in all directions
+    - scan_environment: 360-degree scan to find target objects in all directions. ONLY USE THIS ONCE PER TURN.
     - stop_robot: Stop when needed
     - mission_complete: End mission when target is physically reached
     """,
-    tools=[move_forward, move_backward, rotate, stop_robot, scan_environment, mission_complete],
+    tools=[move_forward, move_backward, move_forward_distance, move_backward_distance, rotate, stop_robot, scan_environment, mission_complete],
     output_key="temp:pilot_action",
 )

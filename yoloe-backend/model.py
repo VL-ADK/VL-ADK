@@ -127,7 +127,7 @@ class YoloModelManager:
                 return {"error": "Failed to set YOLO-E prompts"}
         elif not target_words and not self.current_prompts:
             # Default prompts if none set
-            default_prompts = ["person", "car", "bottle", "chair", "dog", "cat"]
+            default_prompts = ["person"]
             prompt_result = self.set_prompts(default_prompts)
             if not prompt_result["success"]:
                 return {"error": "Failed to set default prompts"}
