@@ -96,7 +96,7 @@ export default function Home() {
                         ADK
                     </div>
                 </div>
-                <div className="flex flex-row gap-4 text-sm font-normal">
+                <div className="flex flex-row gap-2 text-sm font-normal">
                     <button
                         type="button"
                         onClick={() => eStop()}
@@ -121,7 +121,7 @@ export default function Home() {
             </div>
 
             {/* Main grid */}
-            <div className="h-full min-h-0 grid grid-cols-12 gap-1 bg-gradient-to-b from-[#364153] to-[#27303e] border-[#27303e] shadow-md border-2 rounded-md p-1">
+            <div className="h-full min-h-0 grid grid-cols-12 gap-2 bg-gradient-to-b from-[#364153] to-[#27303e] border-[#27303e] shadow-md border-2 rounded-md p-1">
                 {/* Left: Controls */}
                 <div className="col-span-3 flex flex-col gap-1 min-h-0">
                     <div className="text-xs p-1 px-2 border-2 border-green-900 bg-green-900 rounded-sm w-fit">

@@ -465,7 +465,7 @@ export function ManualControls({
     return (
         <div className="h-full flex flex-col min-h-0">
             {/* scrollable content */}
-            <div className="grid grid-rows-3 gap-1 overflow-y-auto pr-1 h-full">
+            <div className="grid grid-rows-3 gap-1 overflow-y-auto h-full">
                 {/* Robot Controls - Takes more space */}
                 <div className="row-span-2 flex-1 border-2 border-[#27303e] shadow-md rounded-md bg-[#171717] p-2 flex flex-col min-h-0">
                     <div className="flex items-center justify-between mb-2">
@@ -652,11 +652,11 @@ export function ManualControls({
                             {prompts.map((p, i) => (
                                 <span
                                     key={`${p}-${i}`}
-                                    className="inline-flex text-xs items-center gap-1 bg-[#2a3442] border border-[#334155] rounded px-2 py-1"
+                                    className="inline-flex text-xs items-center gap-1 bg-gray-700 border-b-2 border-gray-800 rounded-md px-2 py-1"
                                 >
                                     <span>{p}</span>
                                     <button
-                                        className="text-red-300 hover:text-red-500"
+                                        className="text-red-600 hover:text-red-700 my-auto cursor-pointer"
                                         onClick={() => removePrompt(i)}
                                         title="Remove prompt"
                                     >

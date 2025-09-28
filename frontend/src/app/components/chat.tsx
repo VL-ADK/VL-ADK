@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader, Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react";
+import { Loader, Mic, MicOff, PlayIcon, Send, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import SpeechRecognition, {
     useSpeechRecognition,
@@ -662,26 +662,7 @@ export function Chat({ session }: { session: SessionToken | null }) {
             <div className="flex items-center justify-between mb-1">
                 <div className="text-gray-300">CHAT</div>
                 <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setTtsEnabled((v) => !v)}
-                        className={`border p-1 rounded-sm ${
-                            ttsEnabled
-                                ? "border-indigo-400 text-indigo-300"
-                                : "border-gray-500 text-gray-400"
-                        }`}
-                        title={
-                            ttsEnabled
-                                ? "Disable agent voices"
-                                : "Enable agent voices"
-                        }
-                    >
-                        {ttsEnabled ? (
-                            <Volume2 className="w-4 h-4" />
-                        ) : (
-                            <VolumeX className="w-4 h-4" />
-                        )}
-                    </button>
+                    
                     <button
                         type="button"
                         onClick={() => {
@@ -703,53 +684,30 @@ export function Chat({ session }: { session: SessionToken | null }) {
 
                             speechSynthesis.speak(utterance);
                         }}
-                        className="border p-1 px-2 rounded-sm border-blue-400 text-blue-300"
+                        className="border p-1 px-2 rounded-sm cursor-pointer border-white text-white"
                         title="Test browser TTS"
                     >
                         Test
                     </button>
                     <button
                         type="button"
-                        onClick={() => {
-                            console.log("Testing audio context...");
-                            // Try to create an audio context to test audio
-                            try {
-                                const audioContext = new (window.AudioContext ||
-                                    (window as any).webkitAudioContext)();
-                                console.log(
-                                    "Audio context created:",
-                                    audioContext.state
-                                );
-
-                                // Test with oscillator
-                                const oscillator =
-                                    audioContext.createOscillator();
-                                const gainNode = audioContext.createGain();
-
-                                oscillator.connect(gainNode);
-                                gainNode.connect(audioContext.destination);
-
-                                oscillator.frequency.setValueAtTime(
-                                    440,
-                                    audioContext.currentTime
-                                );
-                                gainNode.gain.setValueAtTime(
-                                    0.1,
-                                    audioContext.currentTime
-                                );
-
-                                oscillator.start();
-                                oscillator.stop(audioContext.currentTime + 0.5);
-
-                                console.log("Audio test tone played");
-                            } catch (e) {
-                                console.error("Audio context error:", e);
-                            }
-                        }}
-                        className="border p-1 px-2 rounded-sm border-green-400 text-green-300"
-                        title="Test audio system"
+                        onClick={() => setTtsEnabled((v) => !v)}
+                        className={`border p-1 rounded-sm cursor-pointer ${
+                            ttsEnabled
+                                ? "border-white text-white"
+                                : "border-gray-700 text-gray-700"
+                        }`}
+                        title={
+                            ttsEnabled
+                                ? "Disable agent voices"
+                                : "Enable agent voices"
+                        }
                     >
-                        Audio
+                        {ttsEnabled ? (
+                            <Volume2 className="w-4 h-4" />
+                        ) : (
+                            <VolumeX className="w-4 h-4" />
+                        )}
                     </button>
                     {support !== null && (
                         <button
