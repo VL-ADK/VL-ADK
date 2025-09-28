@@ -118,7 +118,7 @@ class WebSocketServer:
         self._smooth_stop_task = asyncio.create_task(self._decelerate_motors())
 
     async def _decelerate_motors(self):
-        """Gradually reduce motor speeds to 0 over 1 second."""
+        """Gradually reduce LINEAR motion to 0 over 1 second, stop angular motion immediately."""
         if not self.robot:
             return
 
@@ -127,11 +127,22 @@ class WebSocketServer:
             initial_left = self.robot.left_motor.value
             initial_right = self.robot.right_motor.value
 
+            # Check if this is linear motion (both motors same direction) or angular (opposite directions)
+            is_linear_motion = (initial_left * initial_right) >= 0  # Same sign or one is zero
+
+            if not is_linear_motion:
+                # Angular motion (turning) - stop immediately
+                print("WebSocket control: immediate angular stop")
+                self.robot.left_motor.value = 0.0
+                self.robot.right_motor.value = 0.0
+                return
+
             # If motors are already stopped, nothing to do
             if abs(initial_left) < 0.01 and abs(initial_right) < 0.01:
                 return
 
-            # Decelerate over 1 second with 50ms steps (20 steps)
+            # Linear motion - apply smooth deceleration
+            print("WebSocket control: smooth linear deceleration")
             steps = 20
             step_duration = 0.05  # 50ms per step
 
