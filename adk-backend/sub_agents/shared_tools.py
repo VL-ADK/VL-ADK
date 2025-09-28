@@ -289,7 +289,7 @@ def move_forward_tool(speed: float, duration: float) -> dict:
     """Move the robot forward at specified speed and duration.
 
     Args:
-        speed (float): Speed in meters per second (max 3 m/s).
+        speed (float): Measurement of motor speed, between 0.0 and 1.0. This motor speed is completely arbitrary, and is NOT in meters per second.
         duration (float): Duration in seconds.
 
     Returns:
@@ -321,8 +321,7 @@ def move_backward_tool(speed: float, duration: float) -> dict:
     """Move the robot backward at specified speed and duration.
 
     Args:
-        speed (float): Speed in meters per second (max 3 m/s).
-        duration (float): Duration in seconds.
+        speed (float): Measurement of motor speed, between 0.0 and 1.0. This motor speed is completely arbitrary, and is NOT in meters per second.
 
     Returns:
         dict: Status response from robot API
