@@ -10,7 +10,9 @@ from typing import Optional
 from fastapi import FastAPI
 from jetbot import Robot
 from models import RobotControlMessage
+import requests
 import math
+from fastapi.middleware.cors import CORSMiddleware
 
 class RobotActions:
     """
@@ -19,14 +21,24 @@ class RobotActions:
     """
     def __init__(self, robot):
         self.robot = robot
-        self.CALIBRATED_ANGULAR_VELOCITY = 2.6
+        self.current_angle = 0
+        self.current_coord = {"x": 0, "y": 0}
+        self.found_items = []
+        self.CALIBRATED_ANGULAR_VELOCITY = 2.3
 
+    def gc_found_items(self, ttl = 1000*60):
+        new_list = []
+        for item in self.found_items:
+            if (int(time.time() * 1000)-item['timestamp_ms']-ttl < 0):
+                new_list.append(item)
+        self.found_items = new_list
+            
     # --- Core movement function ---
     def _set_motors(self, left_speed: float, right_speed: float, duration: float, smooth_step: bool = True):
         """
         Set motor speeds and optionally stop after duration.
         """
-
+        
         self.robot.left_motor.value = left_speed
         self.robot.right_motor.value = right_speed
         if duration is not None:
@@ -44,26 +56,45 @@ class RobotActions:
                 time.sleep(duration)
                 self.stop()
 
-    def scan(self):
-        total_angle = 360
+    def scan(self, query: list[str] = []):
+        self.gc_found_items()
+        yolo_url = "http://localhost:8001/yolo/"
+        params = [("words", word) for word in query]
+
+        total_angle = 4
         turns = 4
         sleep_directive = 1/turns
         for i in range(turns):
+            response = requests.get(yolo_url, params=params)
+            resp_json = response.json()
+            print(resp_json)
+            for annotation in resp_json["annotations"]:
+                self.found_items.append({"item": annotation["class"], 
+                                         "seen_at_x": self.current_coord["x"],
+                                         "seen_at_y": self.current_coord["y"],
+                                         "angle": self.current_angle + annotation["rotation_degree"],
+                                         "timestamp_ms": int(time.time() * 1000)})
+
             self.rotate(total_angle/turns)
             time.sleep(sleep_directive)
+        
+        return {"x": self.current_coord["x"], "y": self.current_coord["y"], "angle": self.current_angle, "items": self.found_items}
 
     # --- Public movement functions ---
-    def move_forward(self, speed: float = 0.5, duration: float = None):
+    def move_forward(self, speed: float = 0.5, duration: float = 1):
+        self.current_coord = {"x": math.cos(math.radians(self.current_angle)) * (speed*duration),
+                              "y": math.sin(math.radians(self.current_angle)) * (speed*duration)}
         self._set_motors(speed, speed, duration)
 
-    def move_backward(self, speed: float = 0.5, duration: float = None):
+    def move_backward(self, speed: float = 0.5, duration: float = 1):
+        self.current_coord = {"x": math.cos(math.radians(self.current_angle)) * (-speed*duration),
+                        "y": math.sin(math.radians(self.current_angle)) * (-speed*duration)}
         self._set_motors(-speed, -speed, duration)
 
     def rotate(self, angle: float):
         speed = 0.5
 
         angle_rad = math.radians(angle)
-        print(angle_rad)
         omega = self.CALIBRATED_ANGULAR_VELOCITY*(speed/0.5)
         duration = abs(angle_rad / omega)
 
@@ -71,6 +102,7 @@ class RobotActions:
         left_speed = speed if angle > 0 else -speed
         right_speed = -speed if angle > 0 else speed
 
+        self.current_angle = (((self.current_angle+angle)%360)+360)%360
         self._set_motors(left_speed, right_speed, duration, False)
 
     def stop(self):
@@ -106,6 +138,13 @@ class Api:
         self.robot = robot
         self.actions = RobotActions(robot)
         self.app = FastAPI(title="JetBot API")
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+            allow_credentials=True,
+            allow_methods=["*"],  # GET, POST, OPTIONS, etc.
+            allow_headers=["*"],  # Content-Type, Authorization, etc.
+        )
         self.server = None
         self.current_command: Optional[RobotControlMessage] = None
         self._setup_routes()
@@ -115,10 +154,24 @@ class Api:
 
         # Scan the surrounding area
         @self.app.post("/scan/")
-        def api_scan():
+        def api_scan(words: list[str] = []):
+            """
+            Scan the environment and return information about a detected object.
+
+            Returns:
+                x (float): current x position
+                y (float): current y position
+                angle (float): current angle 
+                items: A dictionary with the following keys:
+                    - item (str): The detected object's class label.
+                    - seen_at_x (float): The robot's current x-coordinate when the object was seen.
+                    - seen_at_y (float): The robot's current y-coordinate when the object was seen.
+                    - angle (float): The robot's orientation angle (in degrees or radians, depending on implementation).
+                    - timestamp_ms (int): The Unix timestamp in milliseconds when the object was detected.
+            """
             self.current_command = RobotControlMessage(status="scanning")
-            self.actions.scan()
-            return {"status": "scanning"}
+            data = self.actions.scan(words)
+            return {"status": "scanning", "data": data}
 
         # Move the robot forward
         @self.app.post("/forward/")
