@@ -96,12 +96,28 @@ export function Chat({ session }: { session: SessionToken | null }) {
                 setLoading(false);
                 return;
             }
-            prompt.push(JSON.parse(decoder.decode(value).replace("data: ", "").replace("\n", "")));
-            parse(prompt);
-            } catch (error) {
-                console.log(`[`+decoder.decode(value).replace(/data: /g, "").replace(/\n\n/g, ",")+`{}]`);
-                console.log("Error JSON parsing response:", error);
+            // log full object
+            const rawData = decoder
+                .decode(value)
+                .replace("data: ", "")
+                .replace("\n", "")
+                .trim();
+            console.log("Raw SSE data:", rawData);
+
+            if (rawData && rawData !== "" && rawData !== "data: ") {
+                try {
+                    const parsedData = JSON.parse(rawData);
+                    prompt.push(parsedData);
+                } catch (error) {
+                    console.log(
+                        "Failed to parse JSON:",
+                        error,
+                        "Raw data:",
+                        rawData
+                    );
+                }
             }
+            parse(prompt);
             return reader.read().then(pump);
         });
     };
