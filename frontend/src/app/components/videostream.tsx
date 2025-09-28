@@ -23,12 +23,6 @@ export function VideoStream({
         <div className={`size-full relative`}>
             <div className="size-full absolute top-0 left-0">
                 <div className="flex flex-row p-1 gap-1 text-sm">
-                    <div className="p-1 bg-[#171717]/75 rounded-lg text-white w-fit">
-                        FRONT
-                    </div>
-                    <div className="p-1 bg-[#171717]/75 rounded-lg text-white w-fit">
-                        BACK
-                    </div>
                     {currentPrompts.length > 0 && (
                         <div className="p-1 bg-[#171717]/75 rounded-lg text-white w-fit">
                             PROMPTS: {currentPrompts.join(", ")}
