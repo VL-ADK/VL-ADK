@@ -49,8 +49,9 @@ export function ManualControls({
 }) {
     // --- robot state ---
     const [speed, setSpeed] = useState(0.5);
+    const [angularVelocity, setAngularVelocity] = useState(0.5);
     const [duration, setDuration] = useState<number | "">(0.5);
-    const [angle, setAngle] = useState<number | "">(45);
+    const [degrees, setDegrees] = useState<number | "">(45);
     const [robotStatus, setRobotStatus] = useState<ApiState>("idle");
 
     // --- keyboard control state ---
@@ -206,7 +207,7 @@ export function ManualControls({
                 if (
                     sendControlMessage({
                         action: "left",
-                        angular_velocity: speed,
+                        angular_velocity: angularVelocity,
                     })
                 ) {
                     setRobotStatus("ok");
@@ -222,7 +223,7 @@ export function ManualControls({
                 if (
                     sendControlMessage({
                         action: "right",
-                        angular_velocity: speed,
+                        angular_velocity: angularVelocity,
                     })
                 ) {
                     setRobotStatus("ok");
@@ -234,7 +235,7 @@ export function ManualControls({
             console.error("Keyboard movement error:", error);
             setRobotStatus("error");
         }
-    }, [keysPressed, wsConnected, speed, sendControlMessage]);
+    }, [keysPressed, wsConnected, speed, angularVelocity, sendControlMessage]);
 
     // Keyboard event handlers
     useEffect(() => {
@@ -357,9 +358,12 @@ export function ManualControls({
 
     // Note: Keyboard rotation now uses WebSocket via processKeyboardMovement function
 
-    async function doRotateCustom() {
-        if (angle === "" || Number.isNaN(Number(angle))) return;
-        return doRotate(Number(angle));
+    async function doRotateCustom(direction = 1) {
+        const degreesToRotate =
+            degrees === "" || Number.isNaN(Number(degrees))
+                ? 45
+                : Number(degrees);
+        return doRotate(direction * degreesToRotate);
     }
 
     async function doScan() {
@@ -487,7 +491,7 @@ export function ManualControls({
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="flex flex-col">
                             <label className="text-gray-400 mb-2 text-sm">
-                                Speed
+                                Linear Speed
                             </label>
                             <div className="flex items-center gap-3">
                                 <input
@@ -506,7 +510,7 @@ export function ManualControls({
                                 </span>
                             </div>
                             <div className="text-[10px] text-gray-400 mt-2">
-                                0..1 (motor scale)
+                                Forward/Backward
                             </div>
                         </div>
 
@@ -540,6 +544,61 @@ export function ManualControls({
                         </div>
                     </div>
 
+                    {/* angular speed & degrees */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="flex flex-col">
+                            <label className="text-gray-400 mb-2 text-sm">
+                                Angular Speed
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.05}
+                                    value={angularVelocity}
+                                    onChange={(e) =>
+                                        setAngularVelocity(
+                                            parseFloat(e.target.value)
+                                        )
+                                    }
+                                    className="w-full accent-blue-500 h-3"
+                                />
+                                <span className="w-12 text-right font-mono text-sm">
+                                    {angularVelocity.toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-gray-400 mt-2">
+                                Turn Left/Right
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <label className="text-gray-400 mb-2 text-sm">
+                                Degrees
+                            </label>
+                            <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                max="360"
+                                value={degrees}
+                                onChange={(e) =>
+                                    setDegrees(
+                                        e.target.value === ""
+                                            ? ""
+                                            : Number(e.target.value)
+                                    )
+                                }
+                                className="w-full bg-[#111418] border border-[#2b3442] rounded px-3 py-2 text-sm"
+                                placeholder="45"
+                            />
+                            <div className="text-[10px] text-gray-400 mt-2">
+                                Rotation amount
+                            </div>
+                        </div>
+                    </div>
+
                     {/* D-Pad - Takes more space */}
                     <div className="flex-1 flex flex-col justify-center">
                         <div className="grid grid-cols-3 gap-3">
@@ -554,9 +613,10 @@ export function ManualControls({
 
                             <button
                                 className="py-4 bg-blue-700 hover:bg-blue-800 rounded shadow text-sm font-semibold"
-                                onClick={() => doRotate(-15)}
+                                onClick={() => doRotateCustom(-1)}
+                                title={`Rotate left ${degrees || 45}°`}
                             >
-                                ↺ 15°
+                                ↺ {degrees || 45}°
                             </button>
                             <button
                                 className="py-4 bg-red-700 hover:bg-red-800 rounded shadow sticky top-2 text-sm font-bold"
@@ -567,9 +627,10 @@ export function ManualControls({
                             </button>
                             <button
                                 className="py-4 bg-blue-700 hover:bg-blue-800 rounded shadow text-sm font-semibold"
-                                onClick={() => doRotate(15)}
+                                onClick={() => doRotateCustom(1)}
+                                title={`Rotate right ${degrees || 45}°`}
                             >
-                                15° ↻
+                                {degrees || 45}° ↻
                             </button>
 
                             <div />
@@ -583,57 +644,30 @@ export function ManualControls({
                         </div>
                     </div>
 
-                    {/* rotate presets + custom */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {[5, 15, 45, 90, 180].map((a) => (
+                    {/* custom rotation + scan */}
+                    <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                             <button
-                                key={`l${a}`}
-                                className="px-2 py-1 bg-blue-700 hover:bg-blue-800 rounded"
-                                onClick={() => doRotate(-a)}
-                                title={`Rotate left ${a}°`}
+                                className="px-3 py-2 bg-blue-700 hover:bg-blue-800 rounded text-sm"
+                                onClick={() => doRotateCustom(-1)}
+                                title={`Rotate left ${degrees || 45}°`}
                             >
-                                ↺ {a}°
-                            </button>
-                        ))}
-                        {[5, 15, 45, 90, 180].map((a) => (
-                            <button
-                                key={`r${a}`}
-                                className="px-2 py-1 bg-blue-700 hover:bg-blue-800 rounded"
-                                onClick={() => doRotate(a)}
-                                title={`Rotate right ${a}°`}
-                            >
-                                {a}° ↻
-                            </button>
-                        ))}
-
-                        <div className="ml-auto flex items-center gap-2">
-                            <input
-                                type="number"
-                                step="1"
-                                className="w-20 bg-[#111418] border border-[#2b3442] rounded px-2 py-1"
-                                value={angle}
-                                onChange={(e) =>
-                                    setAngle(
-                                        e.target.value === ""
-                                            ? ""
-                                            : Number(e.target.value)
-                                    )
-                                }
-                                placeholder="deg"
-                            />
-                            <button
-                                className="px-2 py-1 bg-blue-700 hover:bg-blue-800 rounded"
-                                onClick={doRotateCustom}
-                            >
-                                Rotate
+                                ↺ Rotate Left
                             </button>
                             <button
-                                className="px-2 py-1 bg-purple-700 hover:bg-purple-800 rounded"
-                                onClick={doScan}
+                                className="px-3 py-2 bg-blue-700 hover:bg-blue-800 rounded text-sm"
+                                onClick={() => doRotateCustom(1)}
+                                title={`Rotate right ${degrees || 45}°`}
                             >
-                                Scan 360°
+                                Rotate Right ↻
                             </button>
                         </div>
+                        <button
+                            className="px-3 py-2 bg-purple-700 hover:bg-purple-800 rounded text-sm"
+                            onClick={doScan}
+                        >
+                            Scan 360°
+                        </button>
                     </div>
                 </div>
 

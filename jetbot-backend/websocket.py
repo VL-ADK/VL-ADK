@@ -26,6 +26,7 @@ class WebSocketServer:
         self.clients: list[_Client] = []
         self._lock = asyncio.Lock()
         self.robot = robot  # JetBot robot instance for direct control
+        self._smooth_stop_task = None  # Track smooth stop task
 
     async def start(self):
         self.server = await websockets.serve(self._handle_client, self.host, self.port)
@@ -101,12 +102,65 @@ class WebSocketServer:
                 self.robot.right_motor.value = -angular_velocity
 
             elif action == "stop":
-                print("WebSocket control: stop (direct motor control)")
-                self.robot.left_motor.value = 0.0
-                self.robot.right_motor.value = 0.0
+                print("WebSocket control: smooth stop (direct motor control)")
+                await self._smooth_stop()
 
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Invalid control message: {e}")
+
+    async def _smooth_stop(self):
+        """Smoothly decelerate the robot to a stop over 1 second."""
+        # Cancel any existing smooth stop task
+        if self._smooth_stop_task and not self._smooth_stop_task.done():
+            self._smooth_stop_task.cancel()
+
+        # Start new smooth stop task
+        self._smooth_stop_task = asyncio.create_task(self._decelerate_motors())
+
+    async def _decelerate_motors(self):
+        """Gradually reduce motor speeds to 0 over 1 second."""
+        if not self.robot:
+            return
+
+        try:
+            # Get current motor values
+            initial_left = self.robot.left_motor.value
+            initial_right = self.robot.right_motor.value
+
+            # If motors are already stopped, nothing to do
+            if abs(initial_left) < 0.01 and abs(initial_right) < 0.01:
+                return
+
+            # Decelerate over 1 second with 50ms steps (20 steps)
+            steps = 20
+            step_duration = 0.05  # 50ms per step
+
+            for i in range(steps):
+                if self.robot:  # Check robot still exists
+                    # Linear interpolation from initial values to 0
+                    progress = (i + 1) / steps  # 0.05, 0.10, ..., 1.0
+
+                    # Apply easing for smoother deceleration (ease-out)
+                    eased_progress = 1 - (1 - progress) ** 2
+
+                    new_left = initial_left * (1 - eased_progress)
+                    new_right = initial_right * (1 - eased_progress)
+
+                    self.robot.left_motor.value = new_left
+                    self.robot.right_motor.value = new_right
+
+                await asyncio.sleep(step_duration)
+
+            # Ensure completely stopped
+            if self.robot:
+                self.robot.left_motor.value = 0.0
+                self.robot.right_motor.value = 0.0
+
+        except asyncio.CancelledError:
+            # Task was cancelled - immediately stop
+            if self.robot:
+                self.robot.left_motor.value = 0.0
+                self.robot.right_motor.value = 0.0
 
     # ---------- Public API ----------
 
