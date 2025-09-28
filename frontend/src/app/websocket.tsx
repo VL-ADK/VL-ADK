@@ -24,6 +24,12 @@ export type ImageMessage = {
     control: ControlSchema | null;
 };
 
+export type UsefulAnnotationObject = {
+    class: string;
+    confidence: number;
+    center: number[];
+}
+
 export type YOLOObject = {
     x: number;
     y: number;
