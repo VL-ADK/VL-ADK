@@ -65,8 +65,8 @@ export function Chat({ session }: { session: SessionToken | null }) {
     // Mic “armed” state (auto-resume after replies)
     const [micArmed, setMicArmed] = useState(false);
 
-    // TTS toggle
-    const [ttsEnabled, setTtsEnabled] = useState(true);
+    // TTS toggle - disabled by default due to quota limits
+    const [ttsEnabled, setTtsEnabled] = useState(false);
 
     // Is any audio currently playing?
     const [speaking, setSpeaking] = useState(false);
