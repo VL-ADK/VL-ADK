@@ -1,5 +1,5 @@
-const baseUrl = "http://localhost:8000";
-const ROOT_AGENT = "root_agent";
+export const baseUrl = "http://localhost:8000";
+export const ROOT_AGENT = "root_agent";
 
 export type SessionToken = {
     id: string;
@@ -22,7 +22,7 @@ export const startSession = async () => {
 };
 
 export const sendPrompt = async (session:SessionToken, prompt: string) => {
-    const response = await fetch(`${baseUrl}/run`, {
+    const response = await fetch(`${baseUrl}/run_sse`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -38,8 +38,21 @@ export const sendPrompt = async (session:SessionToken, prompt: string) => {
                         "text": prompt
                     }
                 ]
-            }
+            },
+            streaming: true
         }),
     });
-    return response.json();
+    console.log(response);
+    return response.body as ReadableStream<Uint8Array>;
 };
+
+export const eStop = async () => {
+    try {
+        await fetch(`http://localhost:8889/stop/`, {
+            method: "POST",
+        });
+    } catch (error) {
+        // Ignore CORS and other network errors
+        console.log("eStop request completed (CORS errors ignored)");
+    }
+}

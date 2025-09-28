@@ -6,16 +6,17 @@
 # - Runs YOLO-E detection and streams annotated results
 
 import asyncio
-import cv2
-import json
 import base64
+import json
+import os
+import time
+
+import cv2
 import numpy as np
 import websockets
-import time
-import os
-from websocket import YoloWebSocketServer
 from api import YoloApi
 from model import YoloModelManager
+from websocket import YoloWebSocketServer
 
 # Constants
 WEBSOCKET_HOST = "127.0.0.1"
@@ -25,11 +26,12 @@ API_PORT = 8001
 JETBOT_WEBSOCKET_URL = "ws://localhost:8890"
 YOLO_MODEL_PATH = "yoloe-l.pt"
 FORCE_CPU = os.getenv("FORCE_CPU", "false").lower() == "true"
-TARGET_FPS = 20
+TARGET_FPS = 15
 
 # Import checks
 try:
     import torch
+
     print(f"PyTorch imported successfully (device: {'cuda' if torch.cuda.is_available() else 'cpu'})")
 except ImportError as e:
     print(f"PyTorch import failed: {e}")
@@ -54,11 +56,12 @@ except Exception as e:
     print(f"Failed to initialize YOLO-E Model Manager: {e}")
     model_manager = None
 
+
 async def main():
     # Initialize servers
     websocket_server = YoloWebSocketServer(WEBSOCKET_HOST, WEBSOCKET_PORT)
     await websocket_server.start()
-    
+
     # Initialize API server if model is available
     api_server = None
     if model_manager is not None:
@@ -78,33 +81,30 @@ async def main():
                 print(f"Connecting to JetBot WebSocket: {JETBOT_WEBSOCKET_URL}")
                 async with websockets.connect(JETBOT_WEBSOCKET_URL) as ws:
                     print("Connected to JetBot WebSocket")
-                    
+
                     async for message in ws:
                         try:
                             # Parse JSON message from JetBot
                             data = json.loads(message)
-                            
+
                             # Extract base64 image
                             if "image" in data:
                                 image_b64 = data["image"]
-                                
+
                                 # Decode base64 to bytes
                                 image_bytes = base64.b64decode(image_b64)
-                                
+
                                 # Convert to numpy array
                                 nparr = np.frombuffer(image_bytes, np.uint8)
                                 frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                                
+
                                 # Update model manager with latest frame
-                                motor_data = {
-                                    "left_motor": data.get("left_motor", 0.0),
-                                    "right_motor": data.get("right_motor", 0.0)
-                                }
+                                motor_data = {"left_motor": data.get("left_motor", 0.0), "right_motor": data.get("right_motor", 0.0)}
                                 model_manager.update_frame(frame, time.time(), motor_data)
-                                
+
                         except Exception as e:
                             print(f"Error processing JetBot WebSocket message: {e}")
-                            
+
             except websockets.exceptions.ConnectionClosed:
                 print("JetBot WebSocket connection closed, retrying in 5 seconds...")
                 await asyncio.sleep(5)
@@ -144,22 +144,16 @@ async def main():
 
                 # Run YOLO detection on frame
                 detection_results = model_manager.run_detection(frame)
-                
+
                 if "error" in detection_results:
                     print(f"Detection error: {detection_results['error']}")
                     continue
 
-                # Draw annotations on frame
-                annotated_frame = model_manager.draw_annotations_on_frame(
-                    frame, 
-                    detection_results["annotations"]
-                )
+                # Draw annotations on frame for the annotated stream
+                annotated_frame = model_manager.draw_annotations_on_frame(frame, detection_results["annotations"])
 
                 # Encode annotated frame as JPEG
-                ok, buf = await asyncio.to_thread(
-                    cv2.imencode, ".jpg", annotated_frame,
-                    [int(cv2.IMWRITE_JPEG_QUALITY), 75]
-                )
+                ok, buf = await asyncio.to_thread(cv2.imencode, ".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
                 if not ok:
                     continue
 
@@ -170,16 +164,12 @@ async def main():
                     "motor_data": frame_data["motor_data"],
                     "frame_timestamp": frame_data["timestamp"],
                     "detection_timestamp": detection_results["timestamp"],
-                    "image_shape": detection_results.get("image_shape")
+                    "image_shape": detection_results.get("image_shape", [frame.shape[1], frame.shape[0]]),
                 }
 
-                # Broadcast annotated frame + detection data
-                await websocket_server.broadcast_annotated_frame(
-                    buf.tobytes(),
-                    detection_results["annotations"],
-                    detection_data
-                )
-                
+                # Broadcast annotated image with detection data
+                await websocket_server.broadcast_annotated_frame(buf.tobytes(), detection_results["annotations"], detection_data)
+
             except Exception as e:
                 print(f"[annotated_stream] error: {e}")
                 await asyncio.sleep(0.1)
