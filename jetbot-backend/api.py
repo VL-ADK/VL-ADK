@@ -59,27 +59,56 @@ class RobotActions:
                 time.sleep(duration)
                 self.stop()
 
-    def scan(self, query: list[str] = []):
+    def scan(self, query: list[str] = [], orientation: Optional[str] = None):
         self.gc_found_items()
         yolo_url = "http://localhost:8001/yolo/"
         params = [("words", word) for word in query]
+        if orientation:
+            params.append(("orientation", orientation))
 
+        # keep existing behavior
         requests.post(yolo_url + "append-prompts/", params=params)
 
-        total_angle = 4
+        # snapshot starting heading (local zero)
+        _start_angle = self.current_angle
+
+        total_angle = 360
         turns = 4
         sleep_directive = 3 / turns
         for i in range(turns):
             response = requests.get(yolo_url, params=params)
             resp_json = response.json()
             print(resp_json)
-            for annotation in resp_json["annotations"]:
-                self.found_items.append({"item": annotation["class"], "seen_at_x": self.current_coord["x"], "seen_at_y": self.current_coord["y"], "angle": self.current_angle + annotation["rotation_degree"], "timestamp_ms": int(time.time() * 1000)})
+            for annotation in resp_json.get("annotations", []):
+                rot = annotation.get("rotation_degree", annotation.get("rotation_deg", 0.0))
+                try:
+                    rot = float(rot)
+                except Exception:
+                    rot = 0.0
+
+                # absolute heading at detection time
+                _heading_now = self.current_angle + rot
+                # angle relative to where the scan started (start treated as 0)
+                _angle_from_start = (_heading_now - _start_angle) % 360.0
+
+                self.found_items.append({
+                    "item": annotation.get("class"),
+                    "seen_at_x": self.current_coord["x"],
+                    "seen_at_y": self.current_coord["y"],
+                    "angle": _angle_from_start,  # <-- now relative to scan start
+                    "timestamp_ms": int(time.time() * 1000)
+                })
 
             self.rotate(total_angle / turns)
             time.sleep(sleep_directive)
 
-        return {"x": self.current_coord["x"], "y": self.current_coord["y"], "angle": self.current_angle, "items": self.found_items}
+        return {
+            "x": self.current_coord["x"],
+            "y": self.current_coord["y"],
+            "angle": (self.current_angle - _start_angle) % 360.0,  # scan end angle relative to start
+            "items": self.found_items
+        }
+
 
     # --- Public movement functions ---
     def move_forward(self, speed: float = 0.5, duration: float = 1):
@@ -153,9 +182,17 @@ class Api:
 
         # Scan the surrounding area
         @self.app.post("/scan/")
-        def api_scan(words: list[str] = []):
+        def api_scan(words: list[str] = [], orientation: Optional[str] = None):
             """
-            Scan the environment and return information about a detected object.
+            Scan the environment and return information about detected objects with optional orientation filtering.
+
+            Args:
+                words: List of object classes to search for
+                orientation: Filter by object orientation ('horizontal' or 'vertical')
+
+            Spatial Reasoning:
+                - horizontal: Objects wider than tall (tables, cars, laptops, lying objects)
+                - vertical: Objects taller than wide (people, bottles, doors, standing objects)
 
             Returns:
                 x (float): current x position
@@ -167,9 +204,11 @@ class Api:
                     - seen_at_y (float): The robot's current y-coordinate when the object was seen.
                     - angle (float): The robot's orientation angle (in degrees or radians, depending on implementation).
                     - timestamp_ms (int): The Unix timestamp in milliseconds when the object was detected.
+                    - object_orientation (str): "horizontal" or "vertical" based on bounding box aspect ratio
+                    - aspect_ratio (float): width/height ratio for spatial understanding
             """
             self.current_command = RobotControlMessage(status="scanning")
-            data = self.actions.scan(words)
+            data = self.actions.scan(words, orientation)
             return {"status": "scanning", "data": data}
 
         # Move the robot forward
